@@ -772,25 +772,22 @@ python3 fix_imports.py && python3 handler.py`;
                   </div>
 
                   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-yellow-400 mb-3">🔧 How the Auto-Setup Works Now</h3>
                     <div className="space-y-3 text-sm">
-                      <div>
+                    <div className="space-y-3 text-sm">
                         <p className="font-medium text-yellow-400">Step 0: Directory Cleanup</p>
-                        <p className="text-yellow-200">Removes any existing directory to avoid conflicts</p>
                       </div>
                       <div>
-                        <p className="font-medium text-yellow-400">Step 1: Fresh Clone</p>
+                      </div>
                         <p className="text-yellow-200">Clones the latest code from GitHub</p>
-                      </div>
                       <div>
+                        <p className="font-medium text-yellow-400">Step 2: Dependency Installation</p>
+                        <p className="text-yellow-200">Installs runpod package and fixes import statements</p>
+                      </div>
                         <p className="font-medium text-yellow-400">Step 2: Dependency Installation</p>
                         <p className="text-yellow-200">Installs runpod package and fixes import statements</p>
                       </div>
                       <div>
                         <p className="font-medium text-yellow-400">Step 3: Verification</p>
-                        <p className="text-yellow-200">Confirms the handler.py is ready and working</p>
-                      </div>
-                      <div>
                         <p className="font-medium text-yellow-400">Step 4: Processing Ready</p>
                         <p className="text-yellow-200">Your environment is now ready for image processing!</p>
                       </div>
