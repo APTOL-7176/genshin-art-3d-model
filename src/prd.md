@@ -29,6 +29,21 @@ Users want to convert their pixel art characters into modern Genshin Impact-styl
 
 ## Essential Features
 
+### Weapon Removal Options
+- **What it does**: Intelligently detects and removes weapons from character images while preserving natural hand positions
+- **Why it matters**: Many pixel art characters hold weapons, but clean T-pose models need empty hands for proper rigging
+- **Success criteria**: Users can toggle weapon removal on/off, removal process maintains character integrity
+
+### Character Gender Detection
+- **What it does**: Allows users to specify character gender (male/female/auto-detect) for optimized processing
+- **Why it matters**: Different genders may require different processing approaches for optimal results
+- **Success criteria**: Gender setting influences processing parameters and improves output quality
+
+### 3D Model Rigging
+- **What it does**: Automatically generates skeletal rigs for 3D models compatible with game engines
+- **Why it matters**: Rigged models can be immediately used for animation in Unity, Unreal Engine, or Blender
+- **Success criteria**: Generated models include proper bone hierarchies and are animation-ready
+
 ### RunPod API Integration
 - **What it does**: Connects to RunPod serverless endpoints for AI processing
 - **Why it matters**: Provides the computational power needed for complex AI transformations
@@ -40,9 +55,14 @@ Users want to convert their pixel art characters into modern Genshin Impact-styl
 - **Success criteria**: Images upload successfully, preview displays correctly, file validation works
 
 ### Processing Pipeline Visualization
-- **What it does**: Shows real-time progress through 4 processing steps with status indicators
+- **What it does**: Shows real-time progress through 5 processing steps: Style Conversion, Weapon Processing, Image Processing, 3D Model Creation, and Character Rigging
 - **Why it matters**: Keeps users informed during lengthy processing operations
 - **Success criteria**: Progress updates accurately, errors are clearly communicated
+
+### User Configuration Options
+- **What it does**: Provides intuitive controls for weapon removal, gender specification, and rigging options
+- **Why it matters**: Different use cases require different processing approaches
+- **Success criteria**: Settings persist between sessions, clearly communicate their effects
 
 ### Generated Content Management
 - **What it does**: Displays generated images in organized tabs, provides download functionality

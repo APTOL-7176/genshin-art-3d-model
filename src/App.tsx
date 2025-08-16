@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useKV } from '@github/spark/hooks';
 import { 
@@ -19,7 +21,11 @@ import {
   Sparkles,
   Zap,
   CheckCircle,
-  AlertCircle 
+  AlertCircle,
+  Sword,
+  Person,
+  Wrench,
+  Info
 } from '@phosphor-icons/react';
 
 interface ProcessingStep {
@@ -47,6 +53,9 @@ function App() {
   const [modelFiles, setModelFiles] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [removeWeapon, setRemoveWeapon] = useKV("remove-weapon", true);
+  const [enableRigging, setEnableRigging] = useKV("enable-rigging", true);
+  const [characterGender, setCharacterGender] = useKV("character-gender", "auto");
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
     {
       id: 'style-conversion',
@@ -56,9 +65,9 @@ function App() {
       status: 'pending'
     },
     {
-      id: 'pose-conversion',
-      title: 'Weapon Removal',
-      description: 'Remove weapons and adjust pose',
+      id: 'weapon-removal',
+      title: 'Weapon Processing',
+      description: 'Remove/keep weapons based on user preference',
       icon: Zap,
       status: 'pending'
     },
@@ -73,6 +82,13 @@ function App() {
       id: '3d-model',
       title: '3D Model Creation',
       description: 'Generate textured 3D model with InstantMesh',
+      icon: Cube,
+      status: 'pending'
+    },
+    {
+      id: 'rigging',
+      title: 'Character Rigging',
+      description: 'Add skeletal animation rig for character',
       icon: Cube,
       status: 'pending'
     }
@@ -229,6 +245,23 @@ function App() {
       
       const imageBase64 = await convertImageToBase64(uploadedImage);
       
+      // Build dynamic prompt based on user preferences
+      let basePrompt = "Genshin Impact style, anime cel shading, smooth soft gradients, clean thin lineart, high quality, detailed face, natural relaxed hands, strict T-pose, character centered, soft vibrant colors, white studio lighting";
+      let baseNegativePrompt = "pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic";
+      
+      // Add gender-specific prompts
+      if (characterGender === "male") {
+        basePrompt += ", male character, masculine features";
+      } else if (characterGender === "female") {
+        basePrompt += ", female character, feminine features";
+      }
+      
+      // Add weapon removal prompts if enabled
+      if (removeWeapon) {
+        basePrompt += ", no weapons, empty hands, weaponless";
+        baseNegativePrompt += ", weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, blade, shield, hammer, mace";
+      }
+      
       const processingPayload = {
         input: {
           image_url: `data:image/${uploadedImage.type.split('/')[1]};base64,${imageBase64}`,
@@ -240,24 +273,26 @@ function App() {
           controlnet_scales: [1.35, 0.5],
           out_long_side: 1024,
           pixel_preserve: false,
-          prompt: "Genshin Impact style, anime cel shading, smooth soft gradients, clean thin lineart, high quality, detailed face, no weapons, natural relaxed hands, strict T-pose, character centered, soft vibrant colors, white studio lighting",
-          negative_prompt: "weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic"
+          remove_weapon: removeWeapon,
+          character_gender: characterGender,
+          prompt: basePrompt,
+          negative_prompt: baseNegativePrompt
         }
       };
 
       updateStepStatus('style-conversion', 'processing', 25);
-      updateStepStatus('pose-conversion', 'processing', 0);
+      updateStepStatus('weapon-removal', 'processing', 0);
       
       const result = await callRunPodAPI(processingPayload);
       
       updateStepStatus('style-conversion', 'processing', 50);
-      updateStepStatus('pose-conversion', 'processing', 50);
+      updateStepStatus('weapon-removal', 'processing', 50);
       updateStepStatus('multi-view', 'processing', 0);
       
       const jobResult = await waitForJobCompletion(result);
       
       updateStepStatus('style-conversion', 'processing', 90);
-      updateStepStatus('pose-conversion', 'processing', 90);
+      updateStepStatus('weapon-removal', 'processing', 90);
       updateStepStatus('multi-view', 'processing', 50);
       
       // Extract the processed image URL from result
@@ -272,7 +307,7 @@ function App() {
       }
 
       updateStepStatus('style-conversion', 'completed');
-      updateStepStatus('pose-conversion', 'completed');
+      updateStepStatus('weapon-removal', 'completed');
       updateStepStatus('multi-view', 'completed');
       
       // Add generated Genshin-style T-pose image
@@ -291,7 +326,9 @@ function App() {
           final_png: processedImageUrl,
           input_image: processedImageUrl,
           config: "configs/instant-mesh-large.yaml",
-          device: "cuda"
+          device: "cuda",
+          enable_rigging: enableRigging,
+          character_gender: characterGender
         }
       };
 
@@ -310,7 +347,46 @@ function App() {
       if (modelFiles.length > 0) {
         setModelFiles(modelFiles);
         updateStepStatus('3d-model', 'completed');
-        toast.success('3D model generation completed successfully!');
+        
+        // Start rigging process if enabled
+        if (enableRigging) {
+          updateStepStatus('rigging', 'processing', 0);
+          
+          const riggingPayload = {
+            input: {
+              model_file: modelFiles[0], // Use the first generated model file
+              character_gender: characterGender,
+              rig_type: "mixamo", // Standard rigging for game characters
+              bone_count: "medium" // Balanced between performance and flexibility
+            }
+          };
+          
+          updateStepStatus('rigging', 'processing', 25);
+          const riggingResult = await callRunPodAPI(riggingPayload);
+          
+          updateStepStatus('rigging', 'processing', 50);
+          const riggingJobResult = await waitForJobCompletion(riggingResult);
+          
+          updateStepStatus('rigging', 'processing', 90);
+          
+          // Check if rigging was successful
+          const riggedModelFiles = riggingJobResult.output?.rigged_models || [];
+          if (riggedModelFiles.length > 0) {
+            setModelFiles([...modelFiles, ...riggedModelFiles]);
+            updateStepStatus('rigging', 'completed');
+            toast.success('3D model with rigging completed successfully!');
+          } else {
+            updateStepStatus('rigging', 'error');
+            toast.error('Rigging failed - using unrigged model');
+          }
+        } else {
+          // Skip rigging step
+          updateStepStatus('rigging', 'completed');
+        }
+        
+        if (!enableRigging) {
+          toast.success('3D model generation completed successfully!');
+        }
       } else {
         updateStepStatus('3d-model', 'error');
         toast.error('3D model generation failed - no model files found');
@@ -445,16 +521,19 @@ function App() {
                   Configure API
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>RunPod API Configuration</DialogTitle>
                   <DialogDescription>
                     Enter your RunPod API credentials to enable processing. 
                     <br /><br />
                     <strong>Setup Instructions:</strong><br />
-                    1. Deploy the RunPod serverless endpoint using the provided Dockerfile<br />
+                    1. Deploy the RunPod serverless endpoint using: <code>ghcr.io/aptol-7176/genshin-art-3d-model:latest</code><br />
                     2. Get your API key from RunPod dashboard<br />
-                    3. Copy the endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)
+                    3. Copy the endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)<br /><br />
+                    <strong>Container Image:</strong><br />
+                    Use this in the RunPod "Container Image" field:<br />
+                    <code>ghcr.io/aptol-7176/genshin-art-3d-model:latest</code>
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -479,6 +558,20 @@ function App() {
                     <p className="text-xs text-muted-foreground">
                       Format: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync
                     </p>
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium mb-2">Container Setup:</p>
+                        <p className="text-muted-foreground mb-2">
+                          If you see import errors, the container image field should contain:
+                        </p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block">
+                          ghcr.io/aptol-7176/genshin-art-3d-model:latest
+                        </code>
+                      </div>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={testApiConnection} variant="outline" className="flex-1">
@@ -555,8 +648,87 @@ function App() {
           </CardContent>
         </Card>
 
+        {/* Processing Options */}
+        <Card className="processing-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Processing Options
+            </CardTitle>
+            <CardDescription>
+              Configure how your image will be processed
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Character Gender */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Person className="w-4 h-4" />
+                  Character Gender
+                </Label>
+                <Select value={characterGender} onValueChange={setCharacterGender}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto Detect</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Helps optimize the conversion process
+                </p>
+              </div>
+
+              {/* Weapon Removal */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Sword className="w-4 h-4" />
+                  Weapon Handling
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="remove-weapon" 
+                    checked={removeWeapon}
+                    onCheckedChange={setRemoveWeapon}
+                  />
+                  <Label htmlFor="remove-weapon" className="text-sm">
+                    Remove weapons from character
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {removeWeapon ? "Weapons will be automatically removed" : "Weapons will be preserved"}
+                </p>
+              </div>
+
+              {/* Character Rigging */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Wrench className="w-4 h-4" />
+                  3D Model Rigging
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="enable-rigging" 
+                    checked={enableRigging}
+                    onCheckedChange={setEnableRigging}
+                  />
+                  <Label htmlFor="enable-rigging" className="text-sm">
+                    Add skeletal rig for animation
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {enableRigging ? "Model will include animation-ready bones" : "Model will be static without rigging"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Processing Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {processingSteps.map((step) => (
             <Card key={step.id} className={`processing-card ${step.status === 'processing' ? 'active' : ''}`}>
               <CardHeader className="pb-3">
@@ -673,18 +845,35 @@ function App() {
               <CardTitle className="flex items-center gap-2">
                 <Cube className="w-5 h-5" />
                 3D Model Ready
+                {enableRigging && processingSteps.find(s => s.id === 'rigging')?.status === 'completed' && (
+                  <Badge variant="secondary" className="ml-2">With Rigging</Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 Your 3D model has been generated and is ready for download
+                {enableRigging && processingSteps.find(s => s.id === 'rigging')?.status === 'completed' && (
+                  <span className="block mt-1 text-accent">Includes skeletal rig for animation in game engines</span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex justify-center">
                 <Button size="lg" className="gap-2" onClick={download3DModel}>
                   <Download className="w-5 h-5" />
-                  Download 3D Model (.fbx)
+                  Download 3D Model 
+                  {enableRigging && processingSteps.find(s => s.id === 'rigging')?.status === 'completed' 
+                    ? " (.fbx + .rig)" 
+                    : " (.fbx)"
+                  }
                 </Button>
               </div>
+              {enableRigging && processingSteps.find(s => s.id === 'rigging')?.status === 'completed' && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Ready for Unity, Unreal Engine, Blender, and other 3D applications
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
