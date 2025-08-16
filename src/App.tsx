@@ -11,6 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useKV } from '@github/spark/hooks';
+import { ImageProcessor } from '@/services/imageProcessor';
+import { ModelGenerator } from '@/services/modelGenerator';
 import { 
   Upload, 
   Settings, 
@@ -307,6 +309,10 @@ function App() {
   const [removeWeapon, setRemoveWeapon] = useKV("remove-weapon", true);
   const [enableRigging, setEnableRigging] = useKV("enable-rigging", true);
   const [characterGender, setCharacterGender] = useKV("character-gender", "auto");
+  
+  // 고급 처리 서비스 인스턴스
+  const [imageProcessor] = useState(() => new ImageProcessor());
+  const [modelGenerator] = useState(() => new ModelGenerator());
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
     {
       id: 'style-conversion',
@@ -1494,7 +1500,7 @@ function App() {
                       <li>절대 실패하지 않는 Handler → BULLETPROOF 코드</li>
                       <li>nohup 백그라운드 실행 → 프로세스 안정성 보장</li>
                       <li>프로세스 상태 확인 → 실행 검증 완료</li>
-                      <li>상세 로깅 → 문제 즉시 파악 가능</li>
+                      <li>상세 로깅 → 문제 즉시 파악 ���능</li>
                       <li>API 완벽 호환 → RunPod API 응답 구조 일치</li>
                       <li className="font-medium text-green-200">✅ BULLETPROOF: Handler 절대 실패 방지 + 완벽 제어!</li>
                       <li className="text-yellow-200">⚠️ 반드시 GPU Pod에서 실행 (CPU Pod는 매우 느림)</li>
@@ -1530,7 +1536,7 @@ function App() {
                       <div>
                         <p className="font-medium text-sm">2. API 인증 정보:</p>
                         <div className="ml-4 text-xs space-y-1">
-                          <p>• RunPod 대시보드에서 API Key 생성</p>
+                          <p>• RunPod 대시보드���서 API Key 생성</p>
                           <p>• 엔드포인트 URL: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync</p>
                           <p className="text-yellow-300">⚠️ /runsync 엔드포인트 사용 (동기식 처리)</p>
                         </div>
