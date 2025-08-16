@@ -532,9 +532,12 @@ function App() {
                     <br /><br />
                     <strong>✅ Use This Configuration:</strong><br />
                     <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br />
-                    <strong>Start Command:</strong><br />
-                    <code style={{ display: "block", whiteSpace: "pre-wrap", margin: "8px 0", padding: "8px", background: "#1a1a1a", borderRadius: "4px" }}>git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
-                    This fixes the import errors automatically and starts the service.<br /><br />
+                    <strong>Start Command (Recommended):</strong><br />
+                    <code style={{ display: "block", whiteSpace: "pre-wrap", margin: "8px 0", padding: "8px", background: "#1a1a1a", borderRadius: "4px" }}>git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && python -c "import re; content = open('handler.py').read(); open('handler.py', 'w').write(re.sub(r'from \\.', 'from ', content))" && python -m runpod.serverless.start --handler-name handler</code>
+                    This fixes the import errors using Python regex and starts the service.<br /><br />
+                    <strong>Alternative Start Command:</strong><br />
+                    <code style={{ display: "block", whiteSpace: "pre-wrap", margin: "8px 0", padding: "8px", background: "#1a1a1a", borderRadius: "4px" }}>git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
+                    Use this if the first command doesn't work in your environment.<br /><br />
                     <strong>Get Your Credentials:</strong><br />
                     1. Get your API key from RunPod dashboard<br />
                     2. Copy your endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)
@@ -576,12 +579,18 @@ function App() {
                             </code>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">Container Start Command:</p>
+                            <p className="font-medium mb-1">Container Start Command (Option 1 - Recommended):</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \./from /g' handler.py && python -m runpod.serverless.start --handler-name handler
+                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && python -c "import re; content = open('handler.py').read(); open('handler.py', 'w').write(re.sub(r'from \\.', 'from ', content))" && python -m runpod.serverless.start --handler-name handler
                             </code>
                           </div>
-                          <p className="text-xs text-muted-foreground">This automatically fixes the import errors and starts the service</p>
+                          <div>
+                            <p className="font-medium mb-1">Alternative Start Command (Option 2):</p>
+                            <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
+                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler
+                            </code>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Both options fix the import errors automatically. Use Option 1 if sed command fails. Option 1 uses Python regex (more reliable), Option 2 uses sed (faster but may have escaping issues).</p>
                         </div>
                       </div>
                     </div>
@@ -636,8 +645,12 @@ function App() {
                         <code className="bg-background px-2 py-1 rounded text-xs block">runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Just update your Start Command to:</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
+                        <p className="font-medium text-sm">Just update your Start Command to (Option 1 - Recommended):</p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && python -c "import re; content = open('handler.py').read(); open('handler.py', 'w').write(re.sub(r'from \\.', 'from ', content))" && python -m runpod.serverless.start --handler-name handler</code>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Alternative Start Command (Option 2):</p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
                       </div>
                     </div>
                   </div>
