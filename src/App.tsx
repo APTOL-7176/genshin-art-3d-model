@@ -15,17 +15,17 @@ import { ImageProcessor } from '@/services/imageProcessor';
 import { ModelGenerator } from '@/services/modelGenerator';
 import { 
   Upload, 
-  Settings, 
+  Gear, 
   Image as ImageIcon, 
   Cube,
   Eye,
   Download,
   Sparkles,
-  Zap,
+  Lightning,
   CheckCircle,
-  AlertCircle,
+  WarningCircle,
   Sword,
-  Person,
+  User,
   Wrench,
   Info,
   Question,
@@ -325,7 +325,7 @@ function App() {
       id: 'weapon-removal',
       title: 'Weapon Processing',
       description: 'Remove/keep weapons based on user preference',
-      icon: Zap,
+      icon: Lightning,
       status: 'pending'
     },
     {
@@ -1445,7 +1445,7 @@ function App() {
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
-                  <Settings className="w-4 h-4" />
+                  <Gear className="w-4 h-4" />
                   Configure API
                 </Button>
               </DialogTrigger>
@@ -1863,7 +1863,7 @@ if __name__ == "__main__":
                       완성된 실제 AI Handler
                     </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
-                      <Zap className="w-4 h-4" />
+                      <Lightning className="w-4 h-4" />
                       Test v12.0 BULLETPROOF
                     </Button>
                     <Button onClick={() => setIsDialogOpen(false)} className="flex-1">
@@ -2002,7 +2002,7 @@ if __name__ == "__main__":
                 </>
               ) : (
                 <>
-                  <AlertCircle className="w-5 h-5 text-yellow-400" />
+                  <WarningCircle className="w-5 h-5 text-yellow-400" />
                   <span className="text-sm text-yellow-400">API Not Configured</span>
                 </>
               )}
@@ -2082,7 +2082,7 @@ if __name__ == "__main__":
         <Card className="processing-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
+              <Gear className="w-5 h-5" />
               Processing Options
             </CardTitle>
             <CardDescription>
@@ -2094,7 +2094,7 @@ if __name__ == "__main__":
               {/* Character Gender */}
               <div className="space-y-3">
                 <Label className="flex items-center gap-2">
-                  <Person className="w-4 h-4" />
+                  <User className="w-4 h-4" />
                   Character Gender
                 </Label>
                 <Select value={characterGender} onValueChange={setCharacterGender}>
@@ -2207,7 +2207,7 @@ if __name__ == "__main__":
             size="lg"
             className="gap-2"
           >
-            <Zap className="w-5 h-5" />
+            <Lightning className="w-5 h-5" />
             {isProcessing ? 'Processing...' : hasErrorSteps() ? 'Retry Processing' : 'Start Processing'}
           </Button>
           <Button 
@@ -2226,7 +2226,7 @@ if __name__ == "__main__":
           <Card className="processing-card border-destructive/50 bg-destructive/5">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
+                <WarningCircle className="w-5 h-5 text-destructive mt-0.5" />
                 <div className="space-y-2">
                   <p className="font-medium text-destructive">Processing Error Detected</p>
                   <p className="text-sm text-muted-foreground">
@@ -2253,7 +2253,7 @@ if __name__ == "__main__":
                       onClick={testApiConnection}
                       className="gap-2"
                     >
-                      <Zap className="w-4 h-4" />
+                      <Lightning className="w-4 h-4" />
                       Test Connection
                     </Button>
                   </div>
