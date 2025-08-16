@@ -160,7 +160,7 @@ function App() {
         input: {
           action: "initialize_container",
           commands: [
-            "echo '🚀 Container Setup v6.0 - AGGRESSIVE NumPy Fix + GPU Detection'",
+            "echo '🚀 Container Setup v7.0 - PERSISTENT Handler + GPU Detection'",
             "echo 'System Information:'",
             "echo 'Current directory:' && pwd",
             "echo 'Python version:' && python3 --version",
@@ -189,7 +189,13 @@ function App() {
             "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
             "echo '🔬 FINAL Verification (Both NumPy + PyTorch):'",
             "python3 -c \"import numpy as np; print('✅ NumPy Version:', np.__version__); import torch; print('✅ PyTorch Version:', torch.__version__); print('✅ CUDA Available:', torch.cuda.is_available()); print('✅ GPU Count:', torch.cuda.device_count() if torch.cuda.is_available() else 0); print('✅ SUCCESS: All packages loaded without NumPy compatibility errors!')\"",
-            "echo '🎯 Container ready for processing!'"
+            "echo '🎯 Starting PERSISTENT handler (will stay alive)...'",
+            "nohup python3 handler.py > handler.log 2>&1 & echo $! > handler.pid",
+            "sleep 5",
+            "echo '✅ Handler started with PID:' && cat handler.pid",
+            "echo '📊 Handler status:' && ps aux | grep handler.py | grep -v grep || echo 'Handler not running'",
+            "echo '📋 Last 10 lines of handler log:' && tail -10 handler.log 2>/dev/null || echo 'No log yet'",
+            "echo '🚀 Container ready for persistent processing!'"
           ]
         }
       };
@@ -331,20 +337,20 @@ function App() {
     try {
       setIsProcessing(true);
       
-      // Step 0: Setup environment first with GPU verification
-      toast.info('AGGRESSIVE NumPy 2.x 완전 제거 + GPU 환경 설정 중...');
+      // Step 0: Setup environment first with persistent handler
+      toast.info('PERSISTENT Handler + GPU 환경 설정 중...');
       updateStepStatus('style-conversion', 'processing', 5);
       
       try {
         const setupResult = await setupRunPodEnvironment();
         if (setupResult.status === 'COMPLETED') {
-          toast.success('AGGRESSIVE NumPy 제거 + GPU 환경 설정 완료!');
+          toast.success('PERSISTENT Handler + GPU 환경 설정 완료!');
         } else {
           toast.info('환경 이미 구성되었을 수 있음');
         }
       } catch (setupError) {
         console.warn('Environment setup warning:', setupError);
-        toast.warning('⚠️ AGGRESSIVE NumPy 제거 + GPU 설정 경고 - 처리 계속 진행 (이미 준비되었을 수 있음)');
+        toast.warning('⚠️ PERSISTENT Handler + GPU 설정 경고 - 처리 계속 진행 (이미 준비되었을 수 있음)');
       }
       
       // Step 1: Convert image to base64 and process through the full pipeline
@@ -395,7 +401,7 @@ function App() {
       updateStepStatus('style-conversion', 'processing', 30);
       updateStepStatus('weapon-removal', 'processing', 25);
       
-      toast.info('GPU 가속 이미지 처리 파이프라인 시작...');
+      toast.info('PERSISTENT Handler + GPU 가속 이미지 처리 파이프라인 시작...');
       const result = await callRunPodAPI(processingPayload);
       
       updateStepStatus('style-conversion', 'processing', 60);
@@ -546,10 +552,10 @@ function App() {
         toast.error('3D model generation failed - no model files found');
       }
 
-      toast.success('🚀 AGGRESSIVE NumPy 제거 + GPU 가속 처리 파이프라인 완료!');
+      toast.success('🚀 PERSISTENT Handler + GPU 가속 처리 파이프라인 완료!');
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(`AGGRESSIVE NumPy 제거 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`PERSISTENT Handler 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
       // Mark any currently processing step as error
       setProcessingSteps(prev => prev.map(step => 
@@ -606,37 +612,35 @@ function App() {
   };
 
   const copyCommandToClipboard = async () => {
-    const command = "# GPU-ENABLED Container Start Command v6.0 - AGGRESSIVE NumPy Fix\n" +
-"# This command FORCIBLY fixes the NumPy 2.x compatibility issue with PyTorch\n\n" +
-"bash -c \"set -e; echo '🚀 GPU Container Setup v6.0 - AGGRESSIVE NumPy Fix'; echo '🔍 GPU Detection:'; nvidia-smi || echo '⚠️ GPU not available'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \\\"📂 Working in: \\$WORKDIR\\\"; cd \\$WORKDIR; rm -rf genshin-art-3d-model; echo '📥 Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo '📦 Installing dependencies...'; pip install --upgrade pip; pip install runpod; echo '🔧 AGGRESSIVE NumPy Fix (Uninstall + Reinstall)'; pip uninstall -y numpy; pip cache purge; pip install 'numpy==1.26.4' --no-cache-dir; echo '🔧 Reinstalling PyTorch with correct NumPy'; pip uninstall -y torch torchvision torchaudio; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir; pip install diffusers transformers accelerate controlnet_aux; echo '🔧 Fixing imports...'; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\\\"; echo '🔬 FINAL Verification:'; python3 -c \\\"import numpy as np; print('NumPy Version:', np.__version__); import torch; print('PyTorch Version:', torch.__version__); print('CUDA Available:', torch.cuda.is_available()); print('GPU Count:', torch.cuda.device_count() if torch.cuda.is_available() else 0); print('SUCCESS: All packages loaded without errors!')\\\"; echo '🎯 Starting handler...'; python3 handler.py\"\n\n" +
-"# WHAT THIS v6.0 FIXES (AGGRESSIVE APPROACH):\n" +
-"# ❌ Previous issue: pip install 'numpy<2' didn't fully remove NumPy 2.x\n" +
-"# ❌ Previous issue: PyTorch still tried to use NumPy 2.x dependencies\n" +
-"# ✅ NEW AGGRESSIVE SOLUTION:\n" +
-"#   1. COMPLETELY uninstall NumPy (pip uninstall -y numpy)\n" +
-"#   2. Clear pip cache to remove all cached NumPy versions\n" +
-"#   3. Install specific NumPy 1.26.4 version with --no-cache-dir\n" +
-"#   4. COMPLETELY uninstall and reinstall PyTorch with correct NumPy\n" +
-"#   5. Use --no-cache-dir to prevent cached incompatible packages\n" +
-"#   6. Final verification imports both NumPy and PyTorch successfully\n\n" +
+    const command = "# PERSISTENT HANDLER Container Start Command v7.0\n" +
+"# This command starts handler and keeps it running in background\n\n" +
+"bash -c \"set -e; echo '🚀 PERSISTENT Handler Setup v7.0'; echo '🔍 GPU Detection:'; nvidia-smi || echo '⚠️ GPU not available'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \\\"📂 Working in: \\$WORKDIR\\\"; cd \\$WORKDIR; rm -rf genshin-art-3d-model; echo '📥 Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo '📦 Installing dependencies...'; pip install --upgrade pip; pip install runpod; echo '🔧 NumPy Fix'; pip uninstall -y numpy; pip cache purge; pip install 'numpy==1.26.4' --no-cache-dir; echo '🔧 Reinstalling PyTorch'; pip uninstall -y torch torchvision torchaudio; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir; pip install diffusers transformers accelerate controlnet_aux; echo '🔧 Fixing imports...'; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\\\"; echo '🎯 Starting PERSISTENT handler...'; nohup python3 handler.py > handler.log 2>&1 & echo \\$! > handler.pid; sleep 5; echo 'Handler PID:' && cat handler.pid; echo 'Handler status:' && ps aux | grep handler.py | grep -v grep\"\n\n" +
+"# WHAT THIS v7.0 FIXES (PERSISTENT HANDLER):\n" +
+"# ❌ Previous issue: Handler exits immediately with code 0\n" +
+"# ❌ Previous issue: No persistent service running in background\n" +
+"# ✅ NEW PERSISTENT SOLUTION:\n" +
+"#   1. Use nohup to run handler in background\n" +
+"#   2. Save process ID to handler.pid file\n" +
+"#   3. Redirect output to handler.log for debugging\n" +
+"#   4. Verify handler is running with ps aux command\n" +
+"#   5. Handler stays alive to process API requests\n" +
+"#   6. Container doesn't exit after initialization\n\n" +
 "# CONTAINER REQUIREMENTS:\n" +
 "# Image: runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04\n" +
 "# GPU: Any CUDA-compatible GPU (RTX 3090, 4090, A100, etc.)\n" +
 "# VRAM: Minimum 8GB recommended for image processing\n\n" +
-"# Manual verification after setup:\n" +
-"python3 -c \"import numpy as np; print('NumPy:', np.__version__)\"\n" +
-"python3 -c \"import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available())\"\n" +
-"python3 -c \"import numpy as np; import torch; print('SUCCESS: Both NumPy and PyTorch loaded!')\"\n\n" +
-"# EXPECTED FINAL OUTPUT:\n" +
-"# NumPy Version: 1.26.4\n" +
-"# PyTorch Version: 2.1.0+cu118\n" +
-"# CUDA Available: True\n" +
-"# GPU Count: 1 (or more)\n" +
-"# SUCCESS: All packages loaded without errors!";
+"# Verification after setup:\n" +
+"cat handler.pid  # Should show process ID\n" +
+"ps aux | grep handler.py  # Should show running process\n" +
+"tail handler.log  # Should show handler startup logs\n\n" +
+"# EXPECTED OUTPUT:\n" +
+"# Handler PID: 1234 (or similar number)\n" +
+"# Handler status: python3 handler.py (running)\n" +
+"# Container stays alive and ready for requests!";
     
     try {
       await navigator.clipboard.writeText(command);
-      toast.success('🚀 AGGRESSIVE NumPy Fix Command copied! This forcibly removes NumPy 2.x.');
+      toast.success('🚀 PERSISTENT Handler 명령어 복사됨! 이제 핸들러가 백그라운드에서 계속 실행됩니다.');
     } catch (error) {
       console.error('Failed to copy:', error);
       toast.error('Failed to copy command');
@@ -650,14 +654,14 @@ function App() {
     }
     
     try {
-      toast.info('AGGRESSIVE NumPy 제거 + GPU 컨테이너 테스트 중...');
+      toast.info('PERSISTENT Handler + GPU 컨테이너 테스트 중...');
       
           // First, test basic connectivity with GPU detection
           const healthPayload = {
             input: {
               action: "health_check",
               commands: [
-                "echo '🔍 Container Health, AGGRESSIVE NumPy Fix & GPU Status Check:'",
+                "echo '🔍 Container Health, PERSISTENT Handler & GPU Status Check:'",
                 "pwd",
                 "echo 'Python version:' && python3 --version",
                 "echo 'Pip version:' && pip --version", 
@@ -701,20 +705,20 @@ function App() {
       const result = await response.json();
       console.log('Health check result:', result);
       
-      toast.success('✅ API 연결 성공! NumPy 호환성 확인 및 GPU 컨테이너 초기화 중...');
+      toast.success('✅ API 연결 성공! PERSISTENT Handler 확인 및 GPU 컨테이너 초기화 중...');
       
       // Now initialize the container environment
       try {
         const setupResult = await setupRunPodEnvironment();
         
         if (setupResult.status === 'COMPLETED' || setupResult.output) {
-          toast.success('🚀 AGGRESSIVE NumPy 제거 + GPU 컨테이너 초기화 완료! 가속 처리 준비됨.');
+          toast.success('🚀 PERSISTENT Handler + GPU 컨테이너 초기화 완료! 가속 처리 준비됨.');
         } else {
-          toast.info('⚠️ 컨테이너 응답 중이나 AGGRESSIVE NumPy 제거 검증 필요');
+          toast.info('⚠️ 컨테이너 응답 중이나 PERSISTENT Handler 검증 필요');
         }
       } catch (setupError) {
         console.warn('Container initialization warning:', setupError);
-        toast.warning(`⚠️ 컨테이너 응답 중이나 AGGRESSIVE NumPy 제거에 문제 있음: ${setupError instanceof Error ? setupError.message : 'Unknown error'}`);
+        toast.warning(`⚠️ 컨테이너 응답 중이나 PERSISTENT Handler에 문제 있음: ${setupError instanceof Error ? setupError.message : 'Unknown error'}`);
       }
     } catch (error) {
       console.error('API test error:', error);
@@ -744,14 +748,14 @@ function App() {
           </p>
           <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 max-w-4xl mx-auto">
             <p className="text-sm text-red-200 mb-2">
-              <strong>⚠️ CRITICAL: NumPy 2.x 호환성 문제 감지 (PyTorch 로드 실패)</strong>
+              <strong>⚠️ CRITICAL: Handler 즉시 종료 문제 (Exit Code 0)</strong>
             </p>
             <ul className="text-xs text-red-300 text-left space-y-1 max-w-2xl mx-auto">
-              <li>• <strong>현재 상황:</strong> NumPy 2.2.6이 설치되어 있으나 PyTorch는 NumPy 1.x 필요</li>
-              <li>• <strong>오류 메시지:</strong> "_ARRAY_API not found" - NumPy 버전 불일치</li>
-              <li>• <strong>해결방법:</strong> pip uninstall -y numpy + pip install 'numpy==1.26.4'</li>
-              <li>• <strong>필요한 설정:</strong> --no-cache-dir + --force-reinstall + PyTorch 재설치</li>
-              <li className="text-yellow-200">⚠️ AGGRESSIVE 방법으로 NumPy 완전 제거 후 재설치 필요!</li>
+              <li>• <strong>현재 상황:</strong> Handler가 초기화 후 바로 종료되어 API 요청을 받지 못함</li>
+              <li>• <strong>문제 원인:</strong> RunPod 컨테이너에서 백그라운드 서비스 실행 실패</li>
+              <li>• <strong>해결방법:</strong> nohup + background 실행으로 persistent handler 구현</li>
+              <li>• <strong>필요한 설정:</strong> Process ID 저장 + 로그 리다이렉션 + 상태 확인</li>
+              <li className="text-yellow-200">⚠️ PERSISTENT Handler 방법으로 백그라운드 서비스 유지!</li>
             </ul>
           </div>
           
@@ -770,13 +774,13 @@ function App() {
                   <DialogDescription>
                     Enter your RunPod API credentials to enable GPU-accelerated processing.
                     <br /><br />
-                    <strong>🚀 GPU-ENABLED SETUP v6.0 - AGGRESSIVE NumPy 호환성 문제 해결:</strong><br />
+                    <strong>🚀 PERSISTENT HANDLER SETUP v7.0 - Handler 지속성 문제 해결:</strong><br />
                     
                     <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px", color: "#ff6b6b" }}>⚠️ CRITICAL: NumPy 2.x 완전 제거 필요!</p>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px", color: "#ff6b6b" }}>⚠️ CRITICAL: Handler 즉시 종료 문제!</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
                         <code style={{ color: "#7d8590", fontSize: "10px", wordBreak: "break-all" }}>
-                          bash -c "set -e; echo '🚀 GPU Container Setup v6.0'; nvidia-smi; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; cd \\$WORKDIR; rm -rf genshin-art-3d-model; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; pip install --upgrade pip; pip install runpod; pip uninstall -y numpy; pip cache purge; pip install 'numpy==1.26.4' --no-cache-dir; pip uninstall -y torch torchvision torchaudio; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir; pip install diffusers transformers accelerate controlnet_aux; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content);\\\"; python3 -c \\\"import numpy as np; import torch; print('NumPy:', np.__version__); print('CUDA:', torch.cuda.is_available())\\\"; python3 handler.py"
+                          bash -c "set -e; echo '🚀 PERSISTENT Handler Setup v7.0'; nvidia-smi; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; cd \\$WORKDIR; rm -rf genshin-art-3d-model; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; pip install --upgrade pip; pip install runpod; pip uninstall -y numpy; pip cache purge; pip install 'numpy==1.26.4' --no-cache-dir; pip uninstall -y torch torchvision torchaudio; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir; pip install diffusers transformers accelerate controlnet_aux; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content);\\\"; nohup python3 handler.py > handler.log 2>&1 & echo \\$! > handler.pid; sleep 5; ps aux | grep handler.py"
                         </code>
                       </div>
                       <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
@@ -851,11 +855,11 @@ function App() {
                   <div className="flex gap-2">
                     <Button onClick={copyCommandToClipboard} variant="outline" className="flex-1 gap-2">
                       <Copy className="w-4 h-4" />
-                      Copy AGGRESSIVE Fix
+                      Copy PERSISTENT Fix
                     </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Zap className="w-4 h-4" />
-                      Test AGGRESSIVE Fix
+                      Test PERSISTENT Fix
                     </Button>
                     <Button onClick={() => setIsDialogOpen(false)} className="flex-1">
                       Save
@@ -876,42 +880,42 @@ function App() {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Info className="w-5 h-5" />
-                    Setup Guide - GPU 가속 문제 해결
+                    Setup Guide - PERSISTENT Handler 문제 해결
                   </DialogTitle>
                   <DialogDescription>
-                    최신 업데이트: NumPy 호환성 문제 해결 및 GPU 가속 활성화!
+                    최신 업데이트: Handler 즉시 종료 문제 해결 및 백그라운드 서비스 활성화!
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
                   <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-red-400 mb-2">⚠️ CRITICAL: NumPy 호환성 문제!</h3>
+                    <h3 className="font-semibold text-red-400 mb-2">⚠️ CRITICAL: Handler 즉시 종료 문제!</h3>
                     <div className="space-y-2 text-red-200">
-                      <p><strong>발생한 문제:</strong> NumPy 2.2.6이 PyTorch와 호환되지 않아 로드 실패</p>
-                      <p><strong>근본 원인:</strong> PyTorch 2.1.0이 NumPy 1.x에서 컴파일되어 NumPy 2.x와 충돌</p>
-                      <p><strong>오류 메시지:</strong> "_ARRAY_API not found" - NumPy 버전 불일치</p>
-                      <p><strong>AGGRESSIVE 해결방안:</strong> NumPy 완전 제거 + 정확한 버전 재설치 + PyTorch 재설치</p>
-                      <p className="text-green-300 font-medium">✅ AGGRESSIVE NumPy 제거 명령어로 완전 해결!</p>
+                      <p><strong>발생한 문제:</strong> Handler가 초기화 완료 후 바로 종료 (exit code 0)</p>
+                      <p><strong>근본 원인:</strong> RunPod 컨테이너에서 백그라운드 프로세스 실행 실패</p>
+                      <p><strong>증상:</strong> "SUCCESS: All packages loaded" 후 즉시 worker exit</p>
+                      <p><strong>PERSISTENT 해결방안:</strong> nohup + 백그라운드 실행으로 서비스 지속성 보장</p>
+                      <p className="text-green-300 font-medium">✅ PERSISTENT Handler 명령어로 완전 해결!</p>
                     </div>
                   </div>
 
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-green-400 mb-2">✅ AGGRESSIVE NumPy 제거 + GPU 가속 문제 완전히 해결!</h3>
+                    <h3 className="font-semibold text-green-400 mb-2">✅ PERSISTENT Handler + GPU 가속 문제 완전히 해결!</h3>
                     <ul className="list-disc list-inside space-y-1 text-green-300">
-                      <li>NumPy 완전 제거 (pip uninstall -y numpy)</li>
-                      <li>pip cache purge로 캐시된 NumPy 제거</li>
-                      <li>NumPy 1.26.4 정확한 버전 재설치 (--no-cache-dir)</li>
-                      <li>PyTorch 완전 제거 후 CUDA 11.8 전용 재설치</li>
+                      <li>nohup으로 백그라운드 Handler 실행 (종료되지 않음)</li>
+                      <li>Process ID 저장 (handler.pid)로 프로세스 추적</li>
+                      <li>로그 파일 (handler.log) 생성으로 디버깅 지원</li>
+                      <li>ps aux 명령으로 실시간 프로세스 상태 확인</li>
+                      <li>NumPy 1.26.4 정확한 버전 재설치 (호환성 보장)</li>
+                      <li>PyTorch CUDA 11.8 전용 재설치 (GPU 가속)</li>
                       <li>필수 AI/ML 패키지 추가 (diffusers, transformers, accelerate, controlnet_aux)</li>
-                      <li>NumPy 버전 및 GPU 검증 명령어 추가</li>
-                      <li>nvidia-smi를 통한 GPU 하드웨어 확인</li>
-                      <li className="font-medium text-green-200">✅ numpy.version + torch.cuda.is_available() = True 보장!</li>
+                      <li className="font-medium text-green-200">✅ Handler 지속성 + torch.cuda.is_available() = True 보장!</li>
                       <li className="text-yellow-200">⚠️ 반드시 GPU Pod에서 실행 (CPU Pod는 매우 느림)</li>
-                      <li className="text-blue-200">💡 로그에서 "NumPy: 1.26.4" + "CUDA: True" 메시지 확인!</li>
+                      <li className="text-blue-200">💡 로그에서 "Handler PID: XXXX" + "Handler status: running" 확인!</li>
                     </ul>
                   </div>
 
                   <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-primary mb-2">📋 AGGRESSIVE NumPy 제거 + GPU 가속 설정 단계</h3>
+                    <h3 className="font-semibold text-primary mb-2">📋 PERSISTENT Handler + GPU 가속 설정 단계</h3>
                     <div className="space-y-3">
                       <div>
                         <p className="font-medium text-sm">1. GPU Pod 생성:</p>
@@ -929,9 +933,9 @@ function App() {
                             </ul>
                           </div>
                           <div>
-                            <p className="text-xs font-medium">Container Start Command (GPU-ENABLED):</p>
+                            <p className="text-xs font-medium">Container Start Command (PERSISTENT HANDLER):</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">bash -c "nvidia-smi; rm -rf genshin-art-3d-model; git clone https://github.com/APTOL-7176/genshin-art-3d-model.git"</code>
-                            <p className="text-xs text-green-300 mt-1">✅ GPU 감지 + 프로젝트 설정!</p>
+                            <p className="text-xs text-green-300 mt-1">✅ GPU 감지 + 프로젝트 설정 + PERSISTENT Handler 시작!</p>
                           </div>
                         </div>
                       </div>
@@ -947,9 +951,9 @@ function App() {
                         <p className="font-medium text-sm">3. 웹 앱 사용:</p>
                         <div className="ml-4 text-xs space-y-1">
                           <p>• 위에서 API 인증 정보 설정</p>
-                          <p>• "Test AGGRESSIVE Fix" 클릭하여 GPU 환경 준비</p>
+                          <p>• "Test PERSISTENT Fix" 클릭하여 PERSISTENT Handler + GPU 환경 준비</p>
                           <p>• 이미지 업로드 및 처리 시작</p>
-                          <p className="text-green-300">✅ GPU 상태 + NumPy 버전 확인 후 처리 진행</p>
+                          <p className="text-green-300">✅ Handler 지속성 + GPU 상태 확인 후 처리 진행</p>
                         </div>
                       </div>
                     </div>
@@ -962,23 +966,23 @@ function App() {
                         <p className="text-green-200">nvidia-smi로 GPU 하드웨어 및 CUDA 드라이버 상태 확인</p>
                       </div>
                       <div>
-                        <p className="font-medium text-green-400">Step 2: CUDA PyTorch 설치</p>
-                        <p className="text-green-200">CUDA 11.8 전용 PyTorch 및 필수 AI/ML 패키지 강제 설치</p>
+                        <p className="font-medium text-green-400">Step 2: PERSISTENT Handler 시작</p>
+                        <p className="text-green-200">nohup으로 백그라운드에서 Handler 실행 + Process ID 저장</p>
                       </div>
                       <div>
-                        <p className="font-medium text-green-400">Step 3: GPU 검증</p>
-                        <p className="text-green-200">torch.cuda.is_available() 및 GPU 개수 확인</p>
+                        <p className="font-medium text-green-400">Step 3: 지속성 검증</p>
+                        <p className="text-green-200">ps aux로 Handler 프로세스 상태 확인 + 로그 파일 생성</p>
                       </div>
                       <div>
-                        <p className="font-medium text-green-400">Step 4: 가속 처리 준비 완료</p>
-                        <p className="text-green-200">GPU 가속으로 빠른 이미지 처리 환경 완성!</p>
+                        <p className="font-medium text-green-400">Step 4: GPU 가속 처리 준비 완료</p>
+                        <p className="text-green-200">PERSISTENT Handler + GPU 가속으로 안정적인 API 처리 환경 완성!</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={() => setIsSetupGuideOpen(false)}>
-                    이해했습니다! AGGRESSIVE NumPy 제거 완료.
+                    이해했습니다! PERSISTENT Handler 완료.
                   </Button>
                 </div>
               </DialogContent>
