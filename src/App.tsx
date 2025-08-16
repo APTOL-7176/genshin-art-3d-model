@@ -576,7 +576,7 @@ function App() {
                             </code>
                           </div>
                           <div>
-                            <p className=\"font-medium mb-1\">Container Start Command:</p>
+                            <p className="font-medium mb-1">Container Start Command:</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
                               git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r ./requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler
                             </code>
