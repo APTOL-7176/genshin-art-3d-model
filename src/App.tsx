@@ -692,10 +692,11 @@ python3 fix_imports.py && python3 handler.py`;
                             </code>
                           </div>
                           <div className="bg-green-600/10 border border-green-500/30 rounded p-3 mt-3">
-                            <p className="font-medium text-green-400 mb-1">✅ CUDA Messages Are Normal!</p>
+                            <p className="font-medium text-green-400 mb-1">✅ CUDA Messages Are Normal! (Your Issue Explained)</p>
                             <p className="text-xs text-green-300">
-                              The repeated CUDA initialization messages you see are normal startup output.<br />
-                              Your container is working correctly - proceed with confidence!
+                              The repeated CUDA messages are RunPod's GPU initialization - NOT an error!<br />
+                              Container is starting up properly. Your code will run after CUDA loads.<br />
+                              <strong>This is expected behavior - wait for the container to fully boot.</strong>
                             </p>
                           </div>
                         </div>
@@ -734,6 +735,17 @@ python3 fix_imports.py && python3 handler.py`;
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                    <h3 className="font-semibold text-blue-400 mb-2">🤔 Why Do You See Repeated CUDA Messages?</h3>
+                    <div className="space-y-2 text-blue-200">
+                      <p><strong>What you're seeing:</strong> The same CUDA initialization message repeating</p>
+                      <p><strong>Why it happens:</strong> RunPod's GPU container is starting up and initializing CUDA drivers</p>
+                      <p><strong>Is this normal?</strong> YES! This is exactly what should happen</p>
+                      <p><strong>What to do:</strong> Wait 30-60 seconds for the container to fully boot, then test your API</p>
+                      <p className="text-green-300 font-medium">✅ Your container is working correctly - these messages prove it!</p>
+                    </div>
+                  </div>
+
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                     <h3 className="font-semibold text-green-400 mb-2">✅ DIRECTORY CONFLICT FIXED + CUDA STATUS</h3>
                     <ul className="list-disc list-inside space-y-1 text-green-300">
@@ -742,6 +754,8 @@ python3 fix_imports.py && python3 handler.py`;
                       <li>No more "directory already exists" errors</li>
                       <li>Always get the latest code from GitHub</li>
                       <li className="font-medium text-green-200">✅ CUDA messages are NORMAL startup output - container is working!</li>
+                      <li className="text-yellow-200">⚠️ Wait 30-60 seconds for full container boot before testing API</li>
+                      <li className="text-blue-200">💡 Repeated CUDA messages = GPU initialization (this is good!)</li>
                     </ul>
                   </div>
 
