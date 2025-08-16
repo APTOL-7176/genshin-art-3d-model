@@ -533,7 +533,7 @@ function App() {
                     <strong>✅ Use This Configuration:</strong><br />
                     <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br />
                     <strong>Start Command:</strong><br />
-                    <code style={{ display: "block", whiteSpace: "pre-wrap", margin: "8px 0", padding: "8px", background: "#1a1a1a", borderRadius: "4px" }}>git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
+                    <code style={{ display: "block", whiteSpace: "pre-wrap", margin: "8px 0", padding: "8px", background: "#1a1a1a", borderRadius: "4px" }}>git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r ./requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
                     This fixes the import errors automatically and starts the service.<br /><br />
                     <strong>Get Your Credentials:</strong><br />
                     1. Get your API key from RunPod dashboard<br />
@@ -576,9 +576,9 @@ function App() {
                             </code>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">Container Start Command:</p>
+                            <p className=\"font-medium mb-1\">Container Start Command:</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler
+                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r ./requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler
                             </code>
                           </div>
                           <p className="text-xs text-muted-foreground">This automatically fixes the import errors and starts the service</p>
@@ -637,7 +637,7 @@ function App() {
                       </div>
                       <div>
                         <p className="font-medium text-sm">Just update your Start Command to:</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
+                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r ./requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
                       </div>
                     </div>
                   </div>
