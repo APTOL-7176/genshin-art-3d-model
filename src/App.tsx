@@ -737,11 +737,11 @@ function App() {
                     <h3 className="font-semibold text-yellow-400 mb-3">🛠️ Troubleshooting Common Errors</h3>
                     <div className="space-y-3 text-sm">
                       <div>
-                        <p className="font-medium text-yellow-400">Error: "unknown switch 'i'"</p>
-                        <p className="text-yellow-200">Cause: sed -i command not available or incompatible on container OS</p>
                         <p className="text-green-400">Solution: Replaced sed with Python inline regex script</p>
                       </div>
                       <div>
+                        <p className="font-medium text-yellow-400">Error: "unknown switch 'r'"</p>
+                        <p className="text-yellow-200">Cause: Python raw string r'...' syntax confused bash shell</p>
                         <p className="font-medium text-yellow-400">Error: "unknown switch 'r'"</p>
                         <p className="text-yellow-200">Cause: Python raw string r'...' syntax confused bash shell</p>
                         <p className="text-green-400">Solution: Used Python directly without raw strings</p>
@@ -749,11 +749,9 @@ function App() {
                       <div>
                         <p className="font-medium text-yellow-400">Error: "attempted relative import"</p>
                         <p className="text-yellow-200">Cause: Python imports using dots (.) instead of module names</p>
-                        <p className="text-green-400">Solution: The Python regex automatically fixes these imports</p>
-                      </div>
                       <div>
                         <p className="font-medium text-yellow-400">Error: "denied" from GitHub Container Registry</p>
-                        <p className="text-yellow-200">Cause: Private container image is not accessible</p>
+                      <div>
                         <p className="text-green-400">Solution: Use public PyTorch base image as shown above</p>
                       </div>
                       <div>
