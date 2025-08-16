@@ -266,6 +266,7 @@ function App() {
             "echo '🛡️ BULLETPROOF v12.0 최종 성공: Handler 완전 준비!'",
             "tail -f /dev/null"
           ]
+        }
       };
 
       const response = await fetch(apiEndpoint, {
