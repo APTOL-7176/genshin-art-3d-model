@@ -1,0 +1,15 @@
+runpod==1.6.2
+requests
+numpy
+pillow
+tqdm
+imageio
+trimesh
+open3d==0.18.0
+pygltflib
+scipy
+rembg==2.0.57
+onnxruntime-gpu==1.18.1
+huggingface-hub>=0.23.4
+hf_transfer>=0.1.8
+click
