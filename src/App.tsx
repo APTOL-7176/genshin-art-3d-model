@@ -749,9 +749,11 @@ function App() {
                       <div>
                         <p className="font-medium text-yellow-400">Error: "attempted relative import"</p>
                         <p className="text-yellow-200">Cause: Python imports using dots (.) instead of module names</p>
+                        <p className="text-green-400">Solution: Convert relative imports to absolute imports</p>
+                      </div>
                       <div>
                         <p className="font-medium text-yellow-400">Error: "denied" from GitHub Container Registry</p>
-                      <div>
+                        <p className="text-yellow-200">Cause: GitHub Container Registry image is private/inaccessible</p>
                         <p className="text-green-400">Solution: Use public PyTorch base image as shown above</p>
                       </div>
                       <div>
