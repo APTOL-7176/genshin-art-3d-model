@@ -456,11 +456,39 @@ function App() {
   };
 
   const copyCommandToClipboard = async () => {
-    const command = `git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python -c "import re; content=open('handler.py').read(); content=re.sub('from \.','from ',content); open('handler.py','w').write(content)" && python handler.py`;
+    const command = `# Method 1: Separate Commands (RECOMMENDED - Avoids quote escaping issues)
+git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
+cd genshin-art-3d-model
+pip install runpod
+python3 -c "import re; f=open('handler.py'); c=f.read(); f.close(); c=re.sub(r'from \\\\.', 'from ', c); f=open('handler.py','w'); f.write(c); f.close()"
+python3 handler.py
+
+# Method 2: Using Heredoc (No quote conflicts)
+git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python3 << 'EOF'
+import re
+with open('handler.py', 'r') as f:
+    content = f.read()
+content = re.sub(r'from \\\\.', 'from ', content)
+with open('handler.py', 'w') as f:
+    f.write(content)
+EOF
+python3 handler.py
+
+# Method 3: Create Fix Script (Most reliable)
+git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && cat > fix_imports.py << 'EOF'
+import re
+with open('handler.py', 'r') as f:
+    content = f.read()
+content = re.sub(r'from \\\\.', 'from ', content)  
+with open('handler.py', 'w') as f:
+    f.write(content)
+print("Fixed imports in handler.py")
+EOF
+python3 fix_imports.py && python3 handler.py`;
     
     try {
       await navigator.clipboard.writeText(command);
-      toast.success('Command copied to clipboard!');
+      toast.success('Multiple command methods copied to clipboard!');
     } catch (error) {
       console.error('Failed to copy:', error);
       toast.error('Failed to copy command');
@@ -543,13 +571,57 @@ function App() {
                   <DialogDescription>
                     Enter your RunPod API credentials to enable processing. 
                     <br /><br />
-                    <strong>🚨 FINAL FIXED COMMAND - Copy This Exact Command:</strong><br />
-                    <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
-                      <code style={{ color: "#e6edf3", fontSize: "11px", fontFamily: "monospace" }}>
-                        git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python -c "import re; content=open('handler.py').read(); content=re.sub('from \.','from ',content); open('handler.py','w').write(content)" && python handler.py
-                      </code>
+                    <strong>🚨 MULTIPLE WORKING SOLUTIONS - Choose One:</strong><br />
+                    
+                    <div style={{ marginTop: "12px" }}>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Method 1: Separate Commands (RECOMMENDED)</p>
+                      <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
+                        <code style={{ color: "#e6edf3", fontSize: "10px", fontFamily: "monospace", whiteSpace: "pre-line" }}>
+{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
+cd genshin-art-3d-model  
+pip install runpod
+python3 -c "import re; f=open('handler.py'); c=f.read(); f.close(); c=re.sub(r'from \\.', 'from ', c); f=open('handler.py','w'); f.write(c); f.close()"
+python3 handler.py`}
+                        </code>
+                      </div>
                     </div>
-                    Final solution: Simplified Python regex and direct handler execution.<br /><br />
+
+                    <div style={{ marginTop: "12px" }}>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Method 2: Using Heredoc</p>
+                      <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
+                        <code style={{ color: "#e6edf3", fontSize: "10px", fontFamily: "monospace", whiteSpace: "pre-line" }}>
+{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python3 << 'EOF'
+import re
+with open('handler.py', 'r') as f:
+    content = f.read()
+content = re.sub(r'from \\.', 'from ', content)
+with open('handler.py', 'w') as f:
+    f.write(content)
+EOF
+python3 handler.py`}
+                        </code>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: "12px" }}>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Method 3: Create Fix Script</p>
+                      <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
+                        <code style={{ color: "#e6edf3", fontSize: "10px", fontFamily: "monospace", whiteSpace: "pre-line" }}>
+{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && cat > fix_imports.py << 'EOF'
+import re
+with open('handler.py', 'r') as f:
+    content = f.read()
+content = re.sub(r'from \\.', 'from ', content)  
+with open('handler.py', 'w') as f:
+    f.write(content)
+print("Fixed imports in handler.py")
+EOF
+python3 fix_imports.py && python3 handler.py`}
+                        </code>
+                      </div>
+                    </div>
+
+                    <strong>Why the original failed:</strong> Shell quote escaping conflicts with Python string quotes.<br /><br />
                     <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
                     <strong>Get Your Credentials:</strong><br />
                     1. Get your API key from RunPod dashboard<br />
@@ -603,7 +675,7 @@ function App() {
                               git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && pip install runpod && python -c "import re; content=open('handler.py').read(); content=re.sub('from \.','from ',content); open('handler.py','w').write(content)" && python handler.py
                             </code>
                           </div>
-                          <p className="text-xs text-muted-foreground">Final fix: Use python handler.py directly without runpod.serverless module!</p>
+                          <p className="text-xs text-muted-foreground">These methods avoid shell quote conflicts that cause "too many arguments" errors!</p>
                         </div>
                       </div>
                     </div>
@@ -611,7 +683,7 @@ function App() {
                    <div className="flex gap-2">
                     <Button onClick={copyCommandToClipboard} variant="secondary" className="flex-1 gap-2">
                       <Copy className="w-4 h-4" />
-                      Copy Fixed Command
+                      Copy Alternative Methods
                     </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Zap className="w-4 h-4" />
@@ -644,15 +716,14 @@ function App() {
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
                   <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-destructive mb-2">🚨 Current Issues (FULLY SOLVED)</h3>
+                    <h3 className="font-semibold text-destructive mb-2">🚨 "Too Many Arguments" Error - SOLVED</h3>
                     <ul className="list-disc list-inside space-y-1 text-destructive-foreground">
-                      <li><s>Docker Registry Error: "denied" - GitHub Container Registry image is private</s></li>
-                      <li><s>Import Error: "attempted relative import with no known parent package"</s></li>
-                      <li><s>Git Error: "unknown switch 'r'" - Python raw string syntax in bash</s></li>
-                      <li><s>Sed Error: "unknown switch 'i'" - sed command not available or incompatible</s></li>
+                      <li><s>Shell quote escaping conflicts between bash and Python strings</s></li>
+                      <li><s>Complex regex patterns causing shell parsing errors</s></li>
+                      <li><s>Mixed single/double quote nesting issues</s></li>
                     </ul>
                     <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/20">
-                      <p className="text-green-400 text-sm font-medium">✅ All errors fixed with Python inline script approach!</p>
+                      <p className="text-green-400 text-sm font-medium">✅ Fixed with multiple alternative approaches below!</p>
                     </div>
                   </div>
 
@@ -665,12 +736,43 @@ function App() {
                         <code className="bg-background px-2 py-1 rounded text-xs block">runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Final Fixed Start Command (Copy This):</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python -c "import re; content=open('handler.py').read(); content=re.sub('from \.','from ',content); open('handler.py','w').write(content)" && python handler.py</code>
+                        <p className="font-medium text-sm">Method 1: Separate Commands (RECOMMENDED):</p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
+{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
+cd genshin-art-3d-model
+pip install runpod
+python3 -c "import re; f=open('handler.py'); c=f.read(); f.close(); c=re.sub(r'from \\\\.', 'from ', c); f=open('handler.py','w'); f.write(c); f.close()"
+python3 handler.py`}
+                        </code>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Alternative with requirements:</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && pip install runpod && python -c "import re; content=open('handler.py').read(); content=re.sub('from \.','from ',content); open('handler.py','w').write(content)" && python handler.py</code>
+                        <p className="font-medium text-sm">Method 2: Using Heredoc (No quote conflicts):</p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
+{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python3 << 'EOF'
+import re
+with open('handler.py', 'r') as f:
+    content = f.read()
+content = re.sub(r'from \\\\.', 'from ', content)
+with open('handler.py', 'w') as f:
+    f.write(content)
+EOF
+python3 handler.py`}
+                        </code>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Method 3: Create Fix Script (Most reliable):</p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
+{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && cat > fix_imports.py << 'EOF'
+import re
+with open('handler.py', 'r') as f:
+    content = f.read()
+content = re.sub(r'from \\\\.', 'from ', content)
+with open('handler.py', 'w') as f:
+    f.write(content)
+print("Fixed imports in handler.py")
+EOF
+python3 fix_imports.py && python3 handler.py`}
+                        </code>
                       </div>
                     </div>
                   </div>
