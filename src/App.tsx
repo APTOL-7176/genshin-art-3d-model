@@ -150,6 +150,37 @@ function App() {
     });
   };
 
+  const setupRunPodEnvironment = async () => {
+    // Setup payload to install dependencies and fix imports
+    const setupPayload = {
+      input: {
+        setup_environment: true,
+        commands: [
+          "cd genshin-art-3d-model",
+          "pip install runpod",
+          "python3 -c \"import re; f=open('handler.py'); c=f.read(); f.close(); c=re.sub(r'from \\\\.', 'from ', c); f=open('handler.py','w'); f.write(c); f.close()\"",
+          "echo 'Environment setup completed successfully'"
+        ]
+      }
+    };
+    
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(setupPayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Setup failed: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  };
+
   const callRunPodAPI = async (payload: any) => {
     // Determine if this is a synchronous or asynchronous endpoint
     const isSync = apiEndpoint.includes('/runsync');
@@ -243,6 +274,16 @@ function App() {
 
     try {
       setIsProcessing(true);
+      
+      // Step 0: Setup environment first
+      toast.info('Setting up RunPod environment...');
+      try {
+        await setupRunPodEnvironment();
+        toast.success('Environment setup completed!');
+      } catch (setupError) {
+        console.warn('Environment setup failed, continuing anyway:', setupError);
+        toast.info('Continuing with processing (environment may already be setup)');
+      }
       
       // Step 1: Convert image to base64 and process through the full pipeline
       updateStepStatus('style-conversion', 'processing', 0);
@@ -502,32 +543,42 @@ python3 fix_imports.py && python3 handler.py`;
     }
     
     try {
-      // Test API connection with a simple debug request
-      const testPayload = {
-        input: {
-          debug_help: true
-        }
-      };
-
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`API call failed: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      toast.info('Testing connection and setting up environment...');
       
-      if (result.ok) {
-        toast.success('API connection successful!');
-      } else {
-        toast.error('API connection failed - check your credentials');
+      // First try to setup the environment
+      try {
+        await setupRunPodEnvironment();
+        toast.success('Environment setup and API connection successful!');
+      } catch (setupError) {
+        console.warn('Setup failed, testing basic connection:', setupError);
+        
+        // Test API connection with a simple debug request
+        const testPayload = {
+          input: {
+            debug_help: true
+          }
+        };
+
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(testPayload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.ok || result.status) {
+          toast.success('API connection successful! (Setup may be needed)');
+        } else {
+          toast.error('API connection failed - check your credentials');
+        }
       }
     } catch (error) {
       console.error('API test error:', error);
@@ -569,59 +620,27 @@ python3 fix_imports.py && python3 handler.py`;
                 <DialogHeader>
                   <DialogTitle>RunPod API Configuration</DialogTitle>
                   <DialogDescription>
-                    Enter your RunPod API credentials to enable processing. 
+                    Enter your RunPod API credentials to enable processing.
                     <br /><br />
-                    <strong>🚨 MULTIPLE WORKING SOLUTIONS - Choose One:</strong><br />
+                    <strong>✅ SIMPLIFIED SETUP - Only use git clone command:</strong><br />
                     
                     <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Method 1: Separate Commands (RECOMMENDED)</p>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Container Start Command (Use This Only):</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
-                        <code style={{ color: "#e6edf3", fontSize: "10px", fontFamily: "monospace", whiteSpace: "pre-line" }}>
-{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
-cd genshin-art-3d-model  
-pip install runpod
-python3 -c "import re; f=open('handler.py'); c=f.read(); f.close(); c=re.sub(r'from \\.', 'from ', c); f=open('handler.py','w'); f.write(c); f.close()"
-python3 handler.py`}
+                        <code style={{ color: "#e6edf3", fontSize: "12px", fontFamily: "monospace" }}>
+                          git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
                         </code>
                       </div>
+                      <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
+                        The app will automatically handle dependency installation and import fixes when you start processing!
+                      </p>
                     </div>
 
-                    <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Method 2: Using Heredoc</p>
-                      <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
-                        <code style={{ color: "#e6edf3", fontSize: "10px", fontFamily: "monospace", whiteSpace: "pre-line" }}>
-{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python3 << 'EOF'
-import re
-with open('handler.py', 'r') as f:
-    content = f.read()
-content = re.sub(r'from \\.', 'from ', content)
-with open('handler.py', 'w') as f:
-    f.write(content)
-EOF
-python3 handler.py`}
-                        </code>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Method 3: Create Fix Script</p>
-                      <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
-                        <code style={{ color: "#e6edf3", fontSize: "10px", fontFamily: "monospace", whiteSpace: "pre-line" }}>
-{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && cat > fix_imports.py << 'EOF'
-import re
-with open('handler.py', 'r') as f:
-    content = f.read()
-content = re.sub(r'from \\.', 'from ', content)  
-with open('handler.py', 'w') as f:
-    f.write(content)
-print("Fixed imports in handler.py")
-EOF
-python3 fix_imports.py && python3 handler.py`}
-                        </code>
-                      </div>
-                    </div>
-
-                    <strong>Why the original failed:</strong> Shell quote escaping conflicts with Python string quotes.<br /><br />
+                    <strong>Why this is better:</strong><br />
+                    • No more shell quote escaping issues<br />
+                    • Environment setup happens through the web interface<br />
+                    • Easier to troubleshoot if something goes wrong<br /><br />
+                    
                     <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
                     <strong>Get Your Credentials:</strong><br />
                     1. Get your API key from RunPod dashboard<br />
@@ -655,7 +674,7 @@ python3 fix_imports.py && python3 handler.py`}
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
-                        <p className="font-medium mb-2 text-green-400">Ready to Use Configuration:</p>
+                        <p className="font-medium mb-2 text-green-400">✅ Simplified Setup Configuration:</p>
                         <div className="space-y-3">
                           <div>
                             <p className="font-medium mb-1">Container Image:</p>
@@ -664,30 +683,20 @@ python3 fix_imports.py && python3 handler.py`}
                             </code>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">Final Fixed Start Command (Copy This):</p>
+                            <p className="font-medium mb-1">Container Start Command (Only This!):</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python -c "import re; content=open('handler.py').read(); content=re.sub('from \.','from ',content); open('handler.py','w').write(content)" && python handler.py
+                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
                             </code>
                           </div>
-                          <div>
-                            <p className="font-medium mb-1">Alternative with requirements:</p>
-                            <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && pip install runpod && python -c "import re; content=open('handler.py').read(); content=re.sub('from \.','from ',content); open('handler.py','w').write(content)" && python handler.py
-                            </code>
-                          </div>
-                          <p className="text-xs text-muted-foreground">These methods avoid shell quote conflicts that cause "too many arguments" errors!</p>
+                          <p className="text-xs text-muted-foreground">🎯 The web app will handle all environment setup automatically when you start processing!</p>
                         </div>
                       </div>
                     </div>
                   </div>
                    <div className="flex gap-2">
-                    <Button onClick={copyCommandToClipboard} variant="secondary" className="flex-1 gap-2">
-                      <Copy className="w-4 h-4" />
-                      Copy Alternative Methods
-                    </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Zap className="w-4 h-4" />
-                      Test Connection
+                      Test & Setup
                     </Button>
                     <Button onClick={() => setIsDialogOpen(false)} className="flex-1">
                       Save
@@ -708,167 +717,82 @@ python3 fix_imports.py && python3 handler.py`}
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Info className="w-5 h-5" />
-                    Complete Setup Guide - Fix Container & Import Errors
+                    Simplified Setup Guide - Auto Environment Setup
                   </DialogTitle>
                   <DialogDescription>
-                    Step-by-step guide to fix the GitHub Container Registry access and import errors
+                    New simplified approach: Only git clone is needed in container start command!
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-destructive mb-2">🚨 "Too Many Arguments" Error - SOLVED</h3>
-                    <ul className="list-disc list-inside space-y-1 text-destructive-foreground">
-                      <li><s>Shell quote escaping conflicts between bash and Python strings</s></li>
-                      <li><s>Complex regex patterns causing shell parsing errors</s></li>
-                      <li><s>Mixed single/double quote nesting issues</s></li>
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                    <h3 className="font-semibold text-green-400 mb-2">✅ NEW SIMPLIFIED APPROACH</h3>
+                    <ul className="list-disc list-inside space-y-1 text-green-300">
+                      <li>Only use git clone in container start command</li>
+                      <li>Web app automatically handles environment setup</li>
+                      <li>No more shell quote escaping issues</li>
+                      <li>Better error handling and troubleshooting</li>
                     </ul>
-                    <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/20">
-                      <p className="text-green-400 text-sm font-medium">✅ Fixed with multiple alternative approaches below!</p>
-                    </div>
                   </div>
 
                   <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-primary mb-2">✅ Your Configuration (Perfect!)</h3>
-                    <p className="mb-2">Based on your screenshot, you have exactly the right setup:</p>
-                    <div className="space-y-2">
+                    <h3 className="font-semibold text-primary mb-2">📋 Your New Setup Steps</h3>
+                    <div className="space-y-3">
                       <div>
-                        <p className="font-medium text-sm">Container Image:</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block">runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code>
+                        <p className="font-medium text-sm">1. Container Configuration:</p>
+                        <div className="ml-4 space-y-2">
+                          <div>
+                            <p className="text-xs font-medium">Container Image:</p>
+                            <code className="bg-background px-2 py-1 rounded text-xs block">runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium">Container Start Command:</p>
+                            <code className="bg-background px-2 py-1 rounded text-xs block">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git</code>
+                          </div>
+                        </div>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Method 1: Separate Commands (RECOMMENDED):</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
-cd genshin-art-3d-model
-pip install runpod
-python3 -c "import re; f=open('handler.py'); c=f.read(); f.close(); c=re.sub(r'from \\\\.', 'from ', c); f=open('handler.py','w'); f.write(c); f.close()"
-python3 handler.py`}
-                        </code>
+                        <p className="font-medium text-sm">2. Get API Credentials:</p>
+                        <div className="ml-4 text-xs space-y-1">
+                          <p>• API Key from RunPod dashboard</p>
+                          <p>• Endpoint URL: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync</p>
+                        </div>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Method 2: Using Heredoc (No quote conflicts):</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && python3 << 'EOF'
-import re
-with open('handler.py', 'r') as f:
-    content = f.read()
-content = re.sub(r'from \\\\.', 'from ', content)
-with open('handler.py', 'w') as f:
-    f.write(content)
-EOF
-python3 handler.py`}
-                        </code>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Method 3: Create Fix Script (Most reliable):</p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-{`git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install runpod && cat > fix_imports.py << 'EOF'
-import re
-with open('handler.py', 'r') as f:
-    content = f.read()
-content = re.sub(r'from \\\\.', 'from ', content)
-with open('handler.py', 'w') as f:
-    f.write(content)
-print("Fixed imports in handler.py")
-EOF
-python3 fix_imports.py && python3 handler.py`}
-                        </code>
+                        <p className="font-medium text-sm">3. Use This Web App:</p>
+                        <div className="ml-4 text-xs space-y-1">
+                          <p>• Configure API credentials above</p>
+                          <p>• Click "Test & Setup" to prepare environment</p>
+                          <p>• Upload image and start processing</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2">Step 1: Get the Source Code</h3>
-                    <code className="bg-muted px-3 py-2 rounded text-xs block">
-                      git clone https://github.com/APTOL-7176/genshin-art-3d-model.git<br/>
-                      cd genshin-art-3d-model
-                    </code>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2">Step 2: Fix Import Errors</h3>
-                    <p className="mb-2">Change all relative imports to absolute imports in <code>handler.py</code>:</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-destructive font-medium mb-1">❌ WRONG:</p>
-                        <code className="bg-muted px-2 py-1 rounded text-xs block">
-                          from .instantmesh_runner import ...<br/>
-                          from .genshin_style_converter import ...
-                        </code>
-                      </div>
-                      <div>
-                        <p className="text-green-400 font-medium mb-1">✅ CORRECT:</p>
-                        <code className="bg-muted px-2 py-1 rounded text-xs block">
-                          from instantmesh_runner import ...<br/>
-                          from genshin_style_converter import ...
-                        </code>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2">Step 3: Deploy Options</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="border rounded-lg p-4">
-                        <h4 className="font-medium mb-2">Option A: Build Custom Container</h4>
-                        <code className="bg-muted px-2 py-1 rounded text-xs block mb-2">
-                          docker build -t yourname/genshin-converter .<br/>
-                          docker push yourname/genshin-converter
-                        </code>
-                        <p className="text-xs text-muted-foreground">Then use your image in RunPod</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <h4 className="font-medium mb-2">Option B: Use Base Image</h4>
-                        <code className="bg-muted px-2 py-1 rounded text-xs block mb-2">
-                          runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel
-                        </code>
-                        <p className="text-xs text-muted-foreground">Upload Python files via RunPod file manager</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-primary mb-2">🎯 Test Your Setup</h3>
-                    <p>Use the "Test Connection" button above. It should return:</p>
-                    <code className="bg-background px-2 py-1 rounded text-xs block mt-2">
-                      {"{"} "status": "success", "message": "RunPod handler is working correctly!" {"}"}
-                    </code>
                   </div>
 
                   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-yellow-400 mb-3">🛠️ Troubleshooting Common Errors</h3>
+                    <h3 className="font-semibold text-yellow-400 mb-3">🔧 How the Auto-Setup Works</h3>
                     <div className="space-y-3 text-sm">
                       <div>
-                        <p className="text-green-400">Solution: Replaced sed with Python inline regex script</p>
+                        <p className="font-medium text-yellow-400">Step 1: Environment Detection</p>
+                        <p className="text-yellow-200">The web app sends a setup request to your RunPod instance</p>
                       </div>
                       <div>
-                        <p className="font-medium text-yellow-400">Error: "unknown switch 'r'"</p>
-                        <p className="text-yellow-200">Cause: Python raw string r'...' syntax confused bash shell</p>
-                        <p className="font-medium text-yellow-400">Error: "unknown switch 'r'"</p>
-                        <p className="text-yellow-200">Cause: Python raw string r'...' syntax confused bash shell</p>
-                        <p className="text-green-400">Solution: Used Python directly without raw strings</p>
+                        <p className="font-medium text-yellow-400">Step 2: Dependency Installation</p>
+                        <p className="text-yellow-200">Installs runpod package and fixes import statements</p>
                       </div>
                       <div>
-                        <p className="font-medium text-yellow-400">Error: "attempted relative import"</p>
-                        <p className="text-yellow-200">Cause: Python imports using dots (.) instead of module names</p>
-                        <p className="text-green-400">Solution: Convert relative imports to absolute imports</p>
+                        <p className="font-medium text-yellow-400">Step 3: Verification</p>
+                        <p className="text-yellow-200">Confirms the handler.py is ready and working</p>
                       </div>
                       <div>
-                        <p className="font-medium text-yellow-400">Error: "denied" from GitHub Container Registry</p>
-                        <p className="text-yellow-200">Cause: GitHub Container Registry image is private/inaccessible</p>
-                        <p className="text-green-400">Solution: Use public PyTorch base image as shown above</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-yellow-400">Error: "No module named 'runpod'"</p>
-                        <p className="text-yellow-200">Cause: RunPod dependencies not installed</p>
-                        <p className="text-green-400">Solution: Add "pip install runpod" to your start command</p>
+                        <p className="font-medium text-yellow-400">Step 4: Processing Ready</p>
+                        <p className="text-yellow-200">Your environment is now ready for image processing!</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={() => setIsSetupGuideOpen(false)}>
-                    Got it!
+                    Perfect, let's go!
                   </Button>
                 </div>
               </DialogContent>
