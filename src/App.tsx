@@ -156,6 +156,8 @@ function App() {
       input: {
         setup_environment: true,
         commands: [
+          "rm -rf genshin-art-3d-model",
+          "git clone https://github.com/APTOL-7176/genshin-art-3d-model.git",
           "cd genshin-art-3d-model",
           "pip install runpod",
           "python3 -c \"import re; f=open('handler.py'); c=f.read(); f.close(); c=re.sub(r'from \\\\.', 'from ', c); f=open('handler.py','w'); f.write(c); f.close()\"",
@@ -622,24 +624,24 @@ python3 fix_imports.py && python3 handler.py`;
                   <DialogDescription>
                     Enter your RunPod API credentials to enable processing.
                     <br /><br />
-                    <strong>✅ SIMPLIFIED SETUP - Only use git clone command:</strong><br />
+                    <strong>✅ UPDATED SETUP - Now handles existing directories:</strong><br />
                     
                     <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Container Start Command (Use This Only):</p>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Container Start Command:</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
                         <code style={{ color: "#e6edf3", fontSize: "12px", fontFamily: "monospace" }}>
                           git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
                         </code>
                       </div>
                       <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
-                        The app will automatically handle dependency installation and import fixes when you start processing!
+                        ⚠️ If you get "directory already exists" error, that's OK! The app will clean and re-setup automatically.
                       </p>
                     </div>
 
-                    <strong>Why this is better:</strong><br />
-                    • No more shell quote escaping issues<br />
-                    • Environment setup happens through the web interface<br />
-                    • Easier to troubleshoot if something goes wrong<br /><br />
+                    <strong>How it works now:</strong><br />
+                    • Automatically removes old directory if it exists<br />
+                    • Fresh clone ensures latest code<br />
+                    • Environment setup happens through the web interface<br /><br />
                     
                     <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
                     <strong>Get Your Credentials:</strong><br />
@@ -674,7 +676,7 @@ python3 fix_imports.py && python3 handler.py`;
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
-                        <p className="font-medium mb-2 text-green-400">✅ Simplified Setup Configuration:</p>
+                        <p className="font-medium mb-2 text-green-400">✅ Updated Setup Configuration:</p>
                         <div className="space-y-3">
                           <div>
                             <p className="font-medium mb-1">Container Image:</p>
@@ -683,12 +685,12 @@ python3 fix_imports.py && python3 handler.py`;
                             </code>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">Container Start Command (Only This!):</p>
+                            <p className="font-medium mb-1">Container Start Command:</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
                               git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
                             </code>
                           </div>
-                          <p className="text-xs text-muted-foreground">🎯 The web app will handle all environment setup automatically when you start processing!</p>
+                          <p className="text-xs text-muted-foreground">🎯 App now handles "directory exists" errors automatically by cleaning and re-cloning!</p>
                         </div>
                       </div>
                     </div>
@@ -717,25 +719,25 @@ python3 fix_imports.py && python3 handler.py`;
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Info className="w-5 h-5" />
-                    Simplified Setup Guide - Auto Environment Setup
+                    Updated Setup Guide - Auto Directory Cleanup
                   </DialogTitle>
                   <DialogDescription>
-                    New simplified approach: Only git clone is needed in container start command!
+                    Updated approach: Handles "directory exists" errors automatically!
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-green-400 mb-2">✅ NEW SIMPLIFIED APPROACH</h3>
+                    <h3 className="font-semibold text-green-400 mb-2">✅ UPDATED APPROACH - Handles Directory Conflicts</h3>
                     <ul className="list-disc list-inside space-y-1 text-green-300">
-                      <li>Only use git clone in container start command</li>
-                      <li>Web app automatically handles environment setup</li>
-                      <li>No more shell quote escaping issues</li>
-                      <li>Better error handling and troubleshooting</li>
+                      <li>Automatically removes existing directory before cloning</li>
+                      <li>Fresh clone ensures latest code every time</li>
+                      <li>No more "directory exists" errors</li>
+                      <li>Web app handles all environment setup</li>
                     </ul>
                   </div>
 
                   <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-primary mb-2">📋 Your New Setup Steps</h3>
+                    <h3 className="font-semibold text-primary mb-2">📋 Updated Setup Steps</h3>
                     <div className="space-y-3">
                       <div>
                         <p className="font-medium text-sm">1. Container Configuration:</p>
@@ -747,6 +749,7 @@ python3 fix_imports.py && python3 handler.py`;
                           <div>
                             <p className="text-xs font-medium">Container Start Command:</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git</code>
+                            <p className="text-xs text-yellow-300 mt-1">⚠️ Don't worry about "directory exists" errors - the app handles this!</p>
                           </div>
                         </div>
                       </div>
@@ -769,11 +772,15 @@ python3 fix_imports.py && python3 handler.py`;
                   </div>
 
                   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-yellow-400 mb-3">🔧 How the Auto-Setup Works</h3>
+                    <h3 className="font-semibold text-yellow-400 mb-3">🔧 How the Auto-Setup Works Now</h3>
                     <div className="space-y-3 text-sm">
                       <div>
-                        <p className="font-medium text-yellow-400">Step 1: Environment Detection</p>
-                        <p className="text-yellow-200">The web app sends a setup request to your RunPod instance</p>
+                        <p className="font-medium text-yellow-400">Step 0: Directory Cleanup</p>
+                        <p className="text-yellow-200">Removes any existing directory to avoid conflicts</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-yellow-400">Step 1: Fresh Clone</p>
+                        <p className="text-yellow-200">Clones the latest code from GitHub</p>
                       </div>
                       <div>
                         <p className="font-medium text-yellow-400">Step 2: Dependency Installation</p>
