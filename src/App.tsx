@@ -44,34 +44,35 @@ function App() {
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
+  const [modelFiles, setModelFiles] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
     {
       id: 'style-conversion',
-      title: 'Style Conversion',
-      description: 'Transform pixel art to Genshin Impact style',
+      title: 'Style & Pose Conversion',
+      description: 'Transform to Genshin Impact style with T-pose',
       icon: Sparkles,
       status: 'pending'
     },
     {
       id: 'pose-conversion',
-      title: 'T-Pose Generation',
-      description: 'Convert character to T-pose',
+      title: 'Weapon Removal',
+      description: 'Remove weapons and adjust pose',
       icon: Zap,
       status: 'pending'
     },
     {
       id: 'multi-view',
-      title: 'Multi-View Generation',
-      description: 'Create front, side, and back views',
+      title: 'Image Processing',
+      description: 'Apply cel shading and smooth gradients',
       icon: ImageIcon,
       status: 'pending'
     },
     {
       id: '3d-model',
       title: '3D Model Creation',
-      description: 'Generate textured 3D model',
+      description: 'Generate textured 3D model with InstantMesh',
       icon: Cube,
       status: 'pending'
     }
@@ -130,6 +131,9 @@ function App() {
   };
 
   const callRunPodAPI = async (payload: any) => {
+    // Determine if this is a synchronous or asynchronous endpoint
+    const isSync = apiEndpoint.includes('/runsync');
+    
     const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
@@ -143,12 +147,35 @@ function App() {
       throw new Error(`API call failed: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    if (isSync) {
+      // For synchronous endpoints, return the result directly
+      return { 
+        id: 'sync-job', 
+        ...result,
+        status: result.error_message ? 'FAILED' : 'COMPLETED'
+      };
+    } else {
+      // For asynchronous endpoints, return job info for polling
+      return result;
+    }
   };
 
-  const waitForJobCompletion = async (jobId: string, maxAttempts = 60): Promise<any> => {
+  const waitForJobCompletion = async (jobResult: any, maxAttempts = 60): Promise<any> => {
+    // If this is a sync result (from /runsync endpoint), return immediately
+    if (jobResult.id === 'sync-job' || jobResult.status === 'COMPLETED' || jobResult.status === 'FAILED') {
+      if (jobResult.status === 'FAILED' || jobResult.error_message) {
+        throw new Error(`Job failed: ${jobResult.error_message || 'Unknown error'}`);
+      }
+      return jobResult;
+    }
+
+    // For async endpoints, poll for completion
+    const baseUrl = apiEndpoint.replace(/\/(run|runsync)$/, '');
+    
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const statusResponse = await fetch(`${apiEndpoint}/status/${jobId}`, {
+      const statusResponse = await fetch(`${baseUrl}/status/${jobResult.id}`, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },
@@ -197,12 +224,12 @@ function App() {
     try {
       setIsProcessing(true);
       
-      // Step 1: Style Conversion to Genshin Impact style
+      // Step 1: Convert image to base64 and process through the full pipeline
       updateStepStatus('style-conversion', 'processing', 0);
       
       const imageBase64 = await convertImageToBase64(uploadedImage);
       
-      const styleConversionPayload = {
+      const processingPayload = {
         input: {
           image_url: `data:image/${uploadedImage.type.split('/')[1]};base64,${imageBase64}`,
           score_threshold: 0.20,
@@ -219,87 +246,50 @@ function App() {
       };
 
       updateStepStatus('style-conversion', 'processing', 25);
-      const styleResult = await callRunPodAPI(styleConversionPayload);
+      updateStepStatus('pose-conversion', 'processing', 0);
+      
+      const result = await callRunPodAPI(processingPayload);
       
       updateStepStatus('style-conversion', 'processing', 50);
-      const styleJobResult = await waitForJobCompletion(styleResult.id);
+      updateStepStatus('pose-conversion', 'processing', 50);
+      updateStepStatus('multi-view', 'processing', 0);
+      
+      const jobResult = await waitForJobCompletion(result);
       
       updateStepStatus('style-conversion', 'processing', 90);
+      updateStepStatus('pose-conversion', 'processing', 90);
+      updateStepStatus('multi-view', 'processing', 50);
       
       // Extract the processed image URL from result
-      const processedImageUrl = styleJobResult.output?.processed_image_url || styleJobResult.output?.image_url;
+      const processedImageUrl = jobResult.output?.processed_image_url || 
+                               jobResult.output?.image_url ||
+                               jobResult.processed_image_url ||
+                               jobResult.image_url;
       
       if (!processedImageUrl) {
-        throw new Error('No processed image received from style conversion');
+        console.error('Full job result:', jobResult);
+        throw new Error('No processed image received from the pipeline. Check RunPod logs for details.');
       }
 
       updateStepStatus('style-conversion', 'completed');
+      updateStepStatus('pose-conversion', 'completed');
+      updateStepStatus('multi-view', 'completed');
       
-      // Add generated Genshin-style image
-      setGeneratedImages(prev => [...prev, {
+      // Add generated Genshin-style T-pose image
+      setGeneratedImages([{
         id: 'genshin-style',
         type: 'genshin',
         url: processedImageUrl,
-        filename: 'genshin_style.png'
+        filename: 'genshin_tpose.png'
       }]);
 
-      // Step 2: T-Pose Conversion (already included in the style conversion)
-      updateStepStatus('pose-conversion', 'completed');
-
-      // Step 3: Multi-View Generation
-      updateStepStatus('multi-view', 'processing', 0);
-      
-      // Generate front, side, and back views using the processed image
-      const viewPrompts = {
-        front: "front view, facing camera, full body, T-pose, centered",
-        side: "side view, profile, full body, T-pose, arms extended horizontally", 
-        back: "back view, rear view, full body, T-pose, arms extended horizontally"
-      };
-
-      const viewResults = [];
-      let viewProgress = 0;
-      
-      for (const [viewType, viewPrompt] of Object.entries(viewPrompts)) {
-        const viewPayload = {
-          input: {
-            image_url: processedImageUrl,
-            prompt: `${styleConversionPayload.input.prompt}, ${viewPrompt}`,
-            negative_prompt: styleConversionPayload.input.negative_prompt,
-            guidance_scale: 7.5,
-            steps: 30,
-            controlnet_scales: [1.2, 0.4]
-          }
-        };
-
-        const viewResult = await callRunPodAPI(viewPayload);
-        const viewJobResult = await waitForJobCompletion(viewResult.id);
-        
-        const viewImageUrl = viewJobResult.output?.processed_image_url || viewJobResult.output?.image_url;
-        
-        if (viewImageUrl) {
-          viewResults.push({
-            id: `${viewType}-view`,
-            type: viewType as 'front' | 'side' | 'back',
-            url: viewImageUrl,
-            filename: `${viewType}_view.png`
-          });
-        }
-
-        viewProgress += 33.33;
-        updateStepStatus('multi-view', 'processing', Math.min(100, viewProgress));
-      }
-      
-      updateStepStatus('multi-view', 'completed');
-      
-      // Add multi-view images
-      setGeneratedImages(prev => [...prev, ...viewResults]);
-
-      // Step 4: 3D Model Creation
+      // Step 2: Generate 3D model using InstantMesh
       updateStepStatus('3d-model', 'processing', 0);
       
       const meshPayload = {
         input: {
           final_png: processedImageUrl,
+          input_image: processedImageUrl,
           config: "configs/instant-mesh-large.yaml",
           device: "cuda"
         }
@@ -309,20 +299,24 @@ function App() {
       const meshResult = await callRunPodAPI(meshPayload);
       
       updateStepStatus('3d-model', 'processing', 50);
-      const meshJobResult = await waitForJobCompletion(meshResult.id);
+      const meshJobResult = await waitForJobCompletion(meshResult);
       
       updateStepStatus('3d-model', 'processing', 90);
       
       // Check if 3D model was created successfully
-      if (meshJobResult.output?.out_dir_listing?.some((file: string) => file.endsWith('.obj') || file.endsWith('.fbx'))) {
+      const modelFiles = meshJobResult.output?.out_dir_listing?.filter((file: string) => 
+        file.endsWith('.obj') || file.endsWith('.fbx') || file.endsWith('.ply') || file.endsWith('.glb')) || [];
+      
+      if (modelFiles.length > 0) {
+        setModelFiles(modelFiles);
         updateStepStatus('3d-model', 'completed');
         toast.success('3D model generation completed successfully!');
       } else {
         updateStepStatus('3d-model', 'error');
-        toast.error('3D model generation failed');
+        toast.error('3D model generation failed - no model files found');
       }
 
-      toast.success('All processing completed successfully!');
+      toast.success('Processing completed successfully!');
     } catch (error) {
       console.error('Processing error:', error);
       toast.error(`Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -360,13 +354,21 @@ function App() {
   const resetProcessing = () => {
     setProcessingSteps(prev => prev.map(step => ({ ...step, status: 'pending', progress: undefined })));
     setGeneratedImages([]);
+    setModelFiles([]);
     setIsProcessing(false);
   };
 
   const download3DModel = async () => {
+    if (modelFiles.length === 0) {
+      toast.error('No 3D model files available');
+      return;
+    }
+    
     try {
-      // In a real implementation, this would get the 3D model file from the last processing result
-      toast.info('3D model download would be implemented here with the actual model file from RunPod');
+      // For now, show which files are available
+      toast.info(`3D model files available: ${modelFiles.join(', ')}`);
+      // Note: In a real implementation, these would be full URLs that can be downloaded
+      // The current RunPod setup would need to provide accessible URLs for the generated files
     } catch (error) {
       console.error('3D model download error:', error);
       toast.error('3D model download failed');
@@ -447,7 +449,12 @@ function App() {
                 <DialogHeader>
                   <DialogTitle>RunPod API Configuration</DialogTitle>
                   <DialogDescription>
-                    Enter your RunPod API credentials to enable processing
+                    Enter your RunPod API credentials to enable processing. 
+                    <br /><br />
+                    <strong>Setup Instructions:</strong><br />
+                    1. Deploy the RunPod serverless endpoint using the provided Dockerfile<br />
+                    2. Get your API key from RunPod dashboard<br />
+                    3. Copy the endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -615,50 +622,45 @@ function App() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="genshin" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="genshin">Genshin Style</TabsTrigger>
-                  <TabsTrigger value="front">Front View</TabsTrigger>
-                  <TabsTrigger value="side">Side View</TabsTrigger>
-                  <TabsTrigger value="back">Back View</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-1">
+                  <TabsTrigger value="genshin">Processed Image</TabsTrigger>
                 </TabsList>
                 
-                {['genshin', 'front', 'side', 'back'].map(viewType => (
-                  <TabsContent key={viewType} value={viewType} className="mt-6">
-                    {generatedImages.find(img => img.type === viewType) ? (
-                      <div className="space-y-4">
-                        <img 
-                          src={generatedImages.find(img => img.type === viewType)?.url}
-                          alt={`${viewType} view`}
-                          className="max-w-md mx-auto rounded-lg border border-border block"
-                        />
-                        <div className="flex justify-center gap-2">
-                          <Button variant="outline" size="sm" className="gap-2">
-                            <Eye className="w-4 h-4" />
-                            Preview
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            className="gap-2"
-                            onClick={() => {
-                              const image = generatedImages.find(img => img.type === viewType);
-                              if (image) {
-                                downloadImage(image.url, image.filename);
-                              }
-                            }}
-                          >
-                            <Download className="w-4 h-4" />
-                            Download
-                          </Button>
-                        </div>
+                <TabsContent value="genshin" className="mt-6">
+                  {generatedImages.find(img => img.type === 'genshin') ? (
+                    <div className="space-y-4">
+                      <img 
+                        src={generatedImages.find(img => img.type === 'genshin')?.url}
+                        alt="Processed Genshin-style image"
+                        className="max-w-md mx-auto rounded-lg border border-border block"
+                      />
+                      <div className="flex justify-center gap-2">
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Eye className="w-4 h-4" />
+                          Preview
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="gap-2"
+                          onClick={() => {
+                            const image = generatedImages.find(img => img.type === 'genshin');
+                            if (image) {
+                              downloadImage(image.url, image.filename);
+                            }
+                          }}
+                        >
+                          <Download className="w-4 h-4" />
+                          Download
+                        </Button>
                       </div>
-                    ) : (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>No {viewType} view generated yet</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No processed image generated yet</p>
+                    </div>
+                  )}
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>

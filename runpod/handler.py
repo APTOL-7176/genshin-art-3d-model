@@ -3,12 +3,12 @@
 import os
 from typing import Any, Dict, List, Optional
 
-from .instantmesh_runner import (
+from instantmesh_runner import (
     INSTANTMESH_DIR,
     call_instantmesh,
     run_help,
 )
-from .utils_subproc import run_cmd
+from utils_subproc import run_cmd
 
 def _get(d: Dict, *keys, default=None):
     for k in keys:

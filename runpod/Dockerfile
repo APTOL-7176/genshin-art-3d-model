@@ -79,7 +79,7 @@ RUN mkdir -p /weights/instantmesh /weights/wonder3d
 # COPY blender_scripts /app/blender_scripts
 
 COPY scripts /app/scripts
-COPY handler.py /app/handler.py
+COPY handler.py instantmesh_runner.py utils_subproc.py /app/
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh && sed -i 's/\r$//' /app/start.sh
 

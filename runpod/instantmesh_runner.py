@@ -2,7 +2,7 @@ import glob
 import os
 from typing import Dict, List, Optional, Tuple
 
-from .utils_subproc import run_cmd
+from utils_subproc import run_cmd
 
 INSTANTMESH_DIR = "/app/repos/InstantMesh"
 
