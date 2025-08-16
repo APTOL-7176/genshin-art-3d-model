@@ -624,23 +624,24 @@ python3 fix_imports.py && python3 handler.py`;
                   <DialogDescription>
                     Enter your RunPod API credentials to enable processing.
                     <br /><br />
-                    <strong>✅ UPDATED SETUP - Now handles existing directories:</strong><br />
+                    <strong>✅ FIXED SETUP - Handles directory conflicts:</strong><br />
                     
                     <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Container Start Command:</p>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Container Start Command (UPDATED):</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
-                        <code style={{ color: "#e6edf3", fontSize: "12px", fontFamily: "monospace" }}>
-                          git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
+                        <code style={{ color: "#e6edf3", fontSize: "12px", fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
+                          {`rm -rf genshin-art-3d-model; git clone https://github.com/APTOL-7176/genshin-art-3d-model.git`}
                         </code>
                       </div>
                       <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
-                        ⚠️ If you get "directory already exists" error, that's OK! The app will clean and re-setup automatically.
+                        ✅ This removes any existing directory first, then clones fresh code every time.
                       </p>
                     </div>
 
-                    <strong>How it works now:</strong><br />
-                    • Automatically removes old directory if it exists<br />
-                    • Fresh clone ensures latest code<br />
+                    <strong>How the fix works:</strong><br />
+                    • Container command now removes existing directory first<br />
+                    • Fresh clone ensures latest code every time<br />
+                    • No more "directory already exists" errors<br />
                     • Environment setup happens through the web interface<br /><br />
                     
                     <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
@@ -672,11 +673,11 @@ python3 fix_imports.py && python3 handler.py`;
                       Format: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync
                     </p>
                   </div>
-                   <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
+                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
-                        <p className="font-medium mb-2 text-green-400">✅ Updated Setup Configuration:</p>
+                        <p className="font-medium mb-2 text-green-400">✅ FIXED Container Setup:</p>
                         <div className="space-y-3">
                           <div>
                             <p className="font-medium mb-1">Container Image:</p>
@@ -685,12 +686,12 @@ python3 fix_imports.py && python3 handler.py`;
                             </code>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">Container Start Command:</p>
+                            <p className="font-medium mb-1">Container Start Command (FIXED):</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
-                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git
+                              {`rm -rf genshin-art-3d-model; git clone https://github.com/APTOL-7176/genshin-art-3d-model.git`}
                             </code>
                           </div>
-                          <p className="text-xs text-muted-foreground">🎯 App now handles "directory exists" errors automatically by cleaning and re-cloning!</p>
+                          <p className="text-xs text-green-300">✅ Now removes existing directory first - no more conflicts!</p>
                         </div>
                       </div>
                     </div>
@@ -722,17 +723,17 @@ python3 fix_imports.py && python3 handler.py`;
                     Updated Setup Guide - Auto Directory Cleanup
                   </DialogTitle>
                   <DialogDescription>
-                    Updated approach: Handles "directory exists" errors automatically!
+                    Updated approach: The Container Start Command now removes existing directories first!
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-green-400 mb-2">✅ UPDATED APPROACH - Handles Directory Conflicts</h3>
+                    <h3 className="font-semibold text-green-400 mb-2">✅ DIRECTORY CONFLICT FIXED</h3>
                     <ul className="list-disc list-inside space-y-1 text-green-300">
-                      <li>Automatically removes existing directory before cloning</li>
-                      <li>Fresh clone ensures latest code every time</li>
-                      <li>No more "directory exists" errors</li>
-                      <li>Web app handles all environment setup</li>
+                      <li>Container command now includes directory removal first</li>
+                      <li>Fresh clone happens every time without conflicts</li>
+                      <li>No more "directory already exists" errors</li>
+                      <li>Always get the latest code from GitHub</li>
                     </ul>
                   </div>
 
@@ -747,9 +748,9 @@ python3 fix_imports.py && python3 handler.py`;
                             <code className="bg-background px-2 py-1 rounded text-xs block">runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code>
                           </div>
                           <div>
-                            <p className="text-xs font-medium">Container Start Command:</p>
-                            <code className="bg-background px-2 py-1 rounded text-xs block">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git</code>
-                            <p className="text-xs text-yellow-300 mt-1">⚠️ Don't worry about "directory exists" errors - the app handles this!</p>
+                            <p className="text-xs font-medium">Container Start Command (FIXED):</p>
+                            <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">rm -rf genshin-art-3d-model; git clone https://github.com/APTOL-7176/genshin-art-3d-model.git</code>
+                            <p className="text-xs text-green-300 mt-1">✅ Now removes existing directory first - no conflicts!</p>
                           </div>
                         </div>
                       </div>
@@ -771,30 +772,30 @@ python3 fix_imports.py && python3 handler.py`;
                     </div>
                   </div>
 
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                     <div className="space-y-3 text-sm">
                       <div>
-                        <p className="font-medium text-yellow-400">Step 1: Directory Cleanup</p>
-                        <p className="text-yellow-200">Removes existing directory if it exists and clones the latest code from GitHub</p>
+                        <p className="font-medium text-green-400">Step 1: Directory Cleanup & Clone</p>
+                        <p className="text-green-200">Removes existing directory (if any) and clones fresh code from GitHub</p>
                       </div>
                       <div>
-                        <p className="font-medium text-yellow-400">Step 2: Dependency Installation</p>
-                        <p className="text-yellow-200">Installs runpod package and fixes import statements</p>
+                        <p className="font-medium text-green-400">Step 2: Dependency Installation</p>
+                        <p className="text-green-200">Installs runpod package and fixes import statements via web app</p>
                       </div>
                       <div>
-                        <p className="font-medium text-yellow-400">Step 3: Verification</p>
-                        <p className="text-yellow-200">Tests environment setup and API connection</p>
+                        <p className="font-medium text-green-400">Step 3: Verification</p>
+                        <p className="text-green-200">Tests environment setup and API connection</p>
                       </div>
                       <div>
-                        <p className="font-medium text-yellow-400">Step 4: Processing Ready</p>
-                        <p className="text-yellow-200">Your environment is now ready for image processing!</p>
+                        <p className="font-medium text-green-400">Step 4: Processing Ready</p>
+                        <p className="text-green-200">Your environment is now ready for image processing!</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={() => setIsSetupGuideOpen(false)}>
-                    Perfect, let's go!
+                    Got it! Problem solved.
                   </Button>
                 </div>
               </DialogContent>
