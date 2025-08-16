@@ -631,26 +631,24 @@ python3 fix_imports.py && python3 handler.py`;
                     <div style={{ marginTop: "12px" }}>
                       <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Container Start Command (BULLETPROOF):</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
-                        <code style={{ color: "#e6edf3", fontSize: "11px", fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
-                          {`rm -rf genshin-art-3d-model 2>/dev/null || true; rm -rf /workspace/genshin-art-3d-model 2>/dev/null || true; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git`}
+                        </code>
+                      </div>
                         </code>
                       </div>
                       <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
-                        🛡️ Triple cleanup + error suppression = 100% reliable setup
+                    </div>
                       </p>
                     </div>
-
-                    <strong>Why this method is bulletproof:</strong><br />
-                    • Multiple rm commands target different possible locations<br />
+/>
                     • 2>/dev/null silences all error messages<br />
                     • || true prevents any command from failing<br />
                     • --depth 1 for fastest possible clone<br />
                     • Works regardless of container state or previous runs<br /><br />
                     
                     <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
+                    
+                    <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
                     <strong>Get Your Credentials:</strong><br />
-                    1. Get your API key from RunPod dashboard<br />
-                    2. Copy your endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -682,24 +680,24 @@ python3 fix_imports.py && python3 handler.py`;
                       <div className="text-sm">
                         <p className="font-medium mb-2 text-green-400">🛡️ BULLETPROOF Container Setup:</p>
                         <div className="space-y-3">
-                          <div>
+                        <p className="font-medium mb-2 text-green-400">🛡️ BULLETPROOF Container Setup:</p>
                             <p className="font-medium mb-1">Container Image:</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block">
-                              runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+                            <p className="font-medium mb-1">Container Image:</p>
                             </code>
                           </div>
                           <div>
                             <p className="font-medium mb-1">Container Start Command (BULLETPROOF):</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
+                            <p className="font-medium mb-1">Container Start Command (BULLETPROOF):</p>-art-3d-model.git`}
+                            </code>
                               {`rm -rf genshin-art-3d-model 2>/dev/null || true; rm -rf /workspace/genshin-art-3d-model 2>/dev/null || true; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git`}
                             </code>
-                          </div>
-                          <p className="text-xs text-green-300">🛡️ Triple cleanup + error suppression = Never fails!</p>
                         </div>
-                      </div>
+                          <p className="text-xs text-green-300">🛡️ Triple cleanup + error suppression = Never fails!</p>
                     </div>
                   </div>
-                   <div className="flex gap-2">
+                    </div>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Zap className="w-4 h-4" />
                       Test & Setup
