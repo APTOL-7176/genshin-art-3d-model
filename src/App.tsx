@@ -136,6 +136,10 @@ function App() {
     ));
   };
 
+  const hasErrorSteps = () => {
+    return processingSteps.some(step => step.status === 'error');
+  };
+
   const convertImageToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -406,6 +410,13 @@ function App() {
     try {
       setIsProcessing(true);
       
+      // Clear any previous error states
+      setProcessingSteps(prev => prev.map(step => ({ 
+        ...step, 
+        status: 'pending' as const, 
+        progress: undefined 
+      })));
+      
       // Step 0: Setup environment first with persistent handler
       toast.info('🛡️ v12.0 BULLETPROOF Handler 환경 설정 중...');
       updateStepStatus('style-conversion', 'processing', 5);
@@ -647,11 +658,28 @@ function App() {
       toast.success('🛡️ v12.0 BULLETPROOF Handler GPU 가속 처리 파이프라인 완료!');
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(`🛡️ v12.0 BULLETPROOF Handler 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Provide specific guidance based on error type
+        if (errorMessage.includes('API call failed')) {
+          toast.error(`🛡️ API 호출 실패: ${errorMessage} - RunPod 엔드포인트와 API 키를 확인하세요`);
+        } else if (errorMessage.includes('Handler')) {
+          toast.error(`🛡️ Handler 오류: ${errorMessage} - GPU 컨테이너 상태를 확인하세요`);
+        } else if (errorMessage.includes('timeout')) {
+          toast.error(`⏱️ 처리 시간 초과: ${errorMessage} - 더 강력한 GPU나 더 작은 이미지를 사용하세요`);
+        } else {
+          toast.error(`🛡️ v12.0 BULLETPROOF Handler 오류: ${errorMessage}`);
+        }
+      } else {
+        toast.error('🛡️ v12.0 BULLETPROOF Handler 실패: 알 수 없는 오류가 발생했습니다');
+      }
       
       // Mark any currently processing step as error
       setProcessingSteps(prev => prev.map(step => 
-        step.status === 'processing' ? { ...step, status: 'error' } : step
+        step.status === 'processing' ? { ...step, status: 'error' as const } : step
       ));
     } finally {
       setIsProcessing(false);
@@ -680,10 +708,18 @@ function App() {
   };
 
   const resetProcessing = () => {
-    setProcessingSteps(prev => prev.map(step => ({ ...step, status: 'pending', progress: undefined })));
+    setProcessingSteps(prev => prev.map(step => ({ 
+      ...step, 
+      status: 'pending' as const, 
+      progress: undefined 
+    })));
     setGeneratedImages([]);
     setModelFiles([]);
     setIsProcessing(false);
+    
+    // Clear any displayed error messages
+    toast.dismiss();
+    toast.success('Processing state reset - ready for new conversion');
   };
 
   const download3DModel = async () => {
@@ -1229,7 +1265,10 @@ function App() {
         {/* Processing Steps */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {processingSteps.map((step) => (
-            <Card key={step.id} className={`processing-card ${step.status === 'processing' ? 'active' : ''}`}>
+            <Card key={step.id} className={`processing-card ${
+              step.status === 'processing' ? 'active' : 
+              step.status === 'error' ? 'error' : ''
+            }`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   {getStepIcon(step)}
@@ -1252,6 +1291,14 @@ function App() {
                 {step.status === 'processing' && step.progress !== undefined && (
                   <Progress value={step.progress} className="h-2" />
                 )}
+                {step.status === 'error' && (
+                  <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded text-xs">
+                    <p className="text-destructive font-medium mb-1">Processing Failed</p>
+                    <p className="text-muted-foreground">
+                      Click "Clear Errors" or "Retry Processing" to try again
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -1266,18 +1313,60 @@ function App() {
             className="gap-2"
           >
             <Zap className="w-5 h-5" />
-            {isProcessing ? 'Processing...' : 'Start Processing'}
+            {isProcessing ? 'Processing...' : hasErrorSteps() ? 'Retry Processing' : 'Start Processing'}
           </Button>
           <Button 
             onClick={resetProcessing} 
-            variant="outline"
+            variant={hasErrorSteps() ? "default" : "outline"}
             size="lg"
             className="gap-2"
             disabled={isProcessing}
           >
-            Reset
+            {hasErrorSteps() ? 'Clear Errors' : 'Reset'}
           </Button>
         </div>
+
+        {/* Error State Help */}
+        {hasErrorSteps() && !isProcessing && (
+          <Card className="processing-card border-destructive/50 bg-destructive/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
+                <div className="space-y-2">
+                  <p className="font-medium text-destructive">Processing Error Detected</p>
+                  <p className="text-sm text-muted-foreground">
+                    Some processing steps encountered errors. This could be due to:
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                    <li>• RunPod container not responding or needs restart</li>
+                    <li>• API endpoint configuration issue</li>
+                    <li>• GPU memory or processing limitations</li>
+                    <li>• Network connectivity problems</li>
+                  </ul>
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={resetProcessing}
+                      className="gap-2"
+                    >
+                      Clear Errors
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={testApiConnection}
+                      className="gap-2"
+                    >
+                      <Zap className="w-4 h-4" />
+                      Test Connection
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Generated Images */}
         {generatedImages.length > 0 && (
