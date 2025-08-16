@@ -154,28 +154,34 @@ function App() {
     // Check if it's a sync endpoint
     const isSync = apiEndpoint.includes('/runsync');
     
-    // Optimized one-time setup payload - no repetitive operations
-    const setupPayload = {
-      input: {
-        action: "initialize_container",
-        commands: [
-          "echo '🚀 Container Status Check v4.0 - Smart Setup'",
-          "echo 'Current working directory:' && pwd",
-          "echo 'Checking if handler is already ready...'",
-          "if [ -f '/genshin-art-3d-model/handler.py' ] || [ -f '/workspace/genshin-art-3d-model/handler.py' ] || [ -f '/app/genshin-art-3d-model/handler.py' ]; then echo '✅ Handler already exists - skipping setup'; python3 -c \"print('🎯 Container ready for processing!'); import sys; sys.exit(0)\"; fi",
-          "echo '📁 Setting up working directory...'",
-          "WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi",
-          "echo \"📂 Using directory: $WORKDIR\"",
-          "cd $WORKDIR",
-          "echo '🧹 One-time cleanup and setup...'",
-          "rm -rf genshin-art-3d-model 2>/dev/null || true",
-          "cd genshin-art-3d-model",
-          "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
-          "pip install --quiet --no-warn-script-location runpod torch torchvision",
-          "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
-          "echo '🎯 Container ready - setup completed!'"
+    try {
+      // Optimized one-time setup payload - no repetitive operations
+      const setupPayload = {
+        input: {
+          action: "initialize_container",
+          commands: [
+            "echo '🚀 Container Status Check v4.0 - Smart Setup'",
+            "echo 'Current working directory:' && pwd",
+            "echo 'Checking if handler is already ready...'",
+            "if [ -f '/genshin-art-3d-model/handler.py' ] || [ -f '/workspace/genshin-art-3d-model/handler.py' ] || [ -f '/app/genshin-art-3d-model/handler.py' ]; then echo '✅ Handler already exists - skipping setup'; python3 -c \"print('🎯 Container ready for processing!'); import sys; sys.exit(0)\"; fi",
+            "echo '📁 Setting up working directory...'",
+            "WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi",
+            "echo \"📂 Using directory: $WORKDIR\"",
+            "cd $WORKDIR",
+            "echo '🧹 One-time cleanup and setup...'",
+            "rm -rf genshin-art-3d-model 2>/dev/null || true",
+            "git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git",
+            "cd genshin-art-3d-model",
+            "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
+            "pip install --quiet --no-warn-script-location runpod torch torchvision",
+            "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
+            "echo '🎯 Container ready - setup completed!'"
+          ]
+        }
+      };
+
       const response = await fetch(apiEndpoint, {
-        timeout: 180
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
