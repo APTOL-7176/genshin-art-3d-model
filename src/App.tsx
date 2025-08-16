@@ -773,21 +773,19 @@ python3 fix_imports.py && python3 handler.py`;
 
                   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
                     <div className="space-y-3 text-sm">
-                    <div className="space-y-3 text-sm">
-                        <p className="font-medium text-yellow-400">Step 0: Directory Cleanup</p>
+                      <div>
+                        <p className="font-medium text-yellow-400">Step 1: Directory Cleanup</p>
+                        <p className="text-yellow-200">Removes existing directory if it exists and clones the latest code from GitHub</p>
                       </div>
                       <div>
-                      </div>
-                        <p className="text-yellow-200">Clones the latest code from GitHub</p>
-                      <div>
-                        <p className="font-medium text-yellow-400">Step 2: Dependency Installation</p>
-                        <p className="text-yellow-200">Installs runpod package and fixes import statements</p>
-                      </div>
                         <p className="font-medium text-yellow-400">Step 2: Dependency Installation</p>
                         <p className="text-yellow-200">Installs runpod package and fixes import statements</p>
                       </div>
                       <div>
                         <p className="font-medium text-yellow-400">Step 3: Verification</p>
+                        <p className="text-yellow-200">Tests environment setup and API connection</p>
+                      </div>
+                      <div>
                         <p className="font-medium text-yellow-400">Step 4: Processing Ready</p>
                         <p className="text-yellow-200">Your environment is now ready for image processing!</p>
                       </div>
