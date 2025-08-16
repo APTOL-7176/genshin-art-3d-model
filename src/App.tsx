@@ -257,17 +257,24 @@ function App() {
             "echo \"🎯 Handler PID: $HANDLER_PID\"",
             "echo '⏳ 5초 대기 중...'",
             "sleep 5",
+            "echo '🔍 Handler 상태 상세 확인:'",
             "if kill -0 $HANDLER_PID 2>/dev/null; then",
-            "  echo '📊 Handler 로그 미리보기:'",
-            "  head -20 bulletproof.log 2>/dev/null || echo 'Handler 실행 중...'",
+            "  echo '✅ BULLETPROOF v12.0 Handler 완전 활성화! (PID: '$HANDLER_PID')'",
+            "  echo '📊 Handler 실시간 로그:'",
+            "  tail -30 bulletproof.log 2>/dev/null || echo '로그 로딩 중...'",
             "  echo '🎯 BULLETPROOF v12.0 성공: Handler 안정적으로 실행 중!'",
+            "  echo '🚀 GPU 가속 처리 환경 완전 준비!'",
             "else",
-            "  echo '❌ Handler 프로세스 중단됨'",
+            "  echo '❌ Handler 프로세스 중단됨 - 디버깅 정보:'",
             "  echo '📋 전체 로그:'",
-            "  cat bulletproof.log 2>/dev/null || echo 'No logs'",
+            "  cat bulletproof.log 2>/dev/null || echo 'No logs available'",
+            "  echo '🔍 프로세스 상태:'",
+            "  ps aux | grep python || echo 'No Python processes'",
             "  exit 1",
             "fi",
             "echo '🛡️ BULLETPROOF v12.0 최종 성공: Handler 완전 준비!'",
+            "echo '🎮 초고사양 하드웨어 GPU 가속 처리 환경 활성화!'",
+            "echo '⚡ 75 steps, 12.5 guidance, 2048px 출력 최고 품질 설정!'",
             "tail -f /dev/null"
           ]
         }
@@ -439,9 +446,9 @@ function App() {
       
       const imageBase64 = await convertImageToBase64(uploadedImage);
       
-      // Build dynamic prompt based on user preferences
-      let basePrompt = "Genshin Impact style, anime cel shading, smooth soft gradients, clean thin lineart, high quality, detailed face, natural relaxed hands, strict T-pose, character centered, soft vibrant colors, white studio lighting";
-      let baseNegativePrompt = "pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic";
+      // Build dynamic prompt based on user preferences - 초고사양용 향상된 프롬프트
+      let basePrompt = "Genshin Impact style, anime cel shading, ultra smooth gradients, pristine clean lineart, masterpiece quality, ultra detailed face and eyes, perfect natural hands, strict T-pose anatomy, character perfectly centered, rich vibrant colors, professional studio lighting, 8K resolution, photorealistic textures with anime style";
+      let baseNegativePrompt = "pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic, blurry, low quality, noise, grain, compression artifacts, bad anatomy, distorted proportions, asymmetrical features";
       
       // Add gender-specific prompts
       if (characterGender === "male") {
@@ -462,18 +469,25 @@ function App() {
           image_data: imageBase64,
           image_format: uploadedImage.type.split('/')[1],
           config: {
-            score_threshold: 0.20,
-            mask_dilate: 12,
-            tpose_scope: "upper_body",
-            guidance_scale: 7.5,
-            steps: 34,
-            controlnet_scales: [1.35, 0.5],
-            out_long_side: 1024,
+            score_threshold: 0.15, // 초고사양용 더 정밀한 감지
+            mask_dilate: 16, // 더 정교한 마스크 처리
+            tpose_scope: "full_body", // 전신 T-pose 변환
+            guidance_scale: 12.5, // 초고사양 하드웨어용 강화된 가이던스
+            steps: 75, // 최고 품질을 위한 증가된 샘플링 스텝
+            controlnet_scales: [1.8, 0.8], // 고사양 하드웨어용 강화
+            out_long_side: 2048, // 4K급 출력
             pixel_preserve: false,
             remove_weapon: removeWeapon,
             character_gender: characterGender,
             prompt: basePrompt,
-            negative_prompt: baseNegativePrompt
+            negative_prompt: baseNegativePrompt,
+            // 초고사양 하드웨어 전용 설정
+            enable_highres_fix: true,
+            highres_scale: 2.0,
+            batch_size: 1,
+            cfg_rescale: 0.7,
+            eta: 0.0, // DDIM sampler for best quality
+            sampler: "DPM++ 2M Karras" // 최고 품질 샘플러
           }
         }
       };
@@ -481,7 +495,7 @@ function App() {
       updateStepStatus('style-conversion', 'processing', 30);
       updateStepStatus('weapon-removal', 'processing', 25);
       
-      toast.info('🛡️ v12.0 BULLETPROOF Handler GPU 가속 이미지 처리 파이프라인 시작...');
+      toast.info('🎮 초고사양 하드웨어 GPU 가속 이미지 처리 시작... (75 steps, 12.5 guidance, 2048px 출력)');
       const result = await callRunPodAPI(processingPayload);
       
       updateStepStatus('style-conversion', 'processing', 60);
@@ -561,7 +575,7 @@ function App() {
           processedImageUrl = canvas.toDataURL('image/png');
         }
         
-        toast.success('🛡️ v12.0 BULLETPROOF Handler 성공! GPU 처리 환경 완벽 구축됨');
+        toast.success('🎮 초고사양 하드웨어 최적화 성공! GPU 가속 최고 품질 처리 환경 완벽 구축됨');
         
         updateStepStatus('style-conversion', 'completed');
         updateStepStatus('weapon-removal', 'completed');
@@ -579,7 +593,7 @@ function App() {
         updateStepStatus('3d-model', 'completed');
         updateStepStatus('rigging', 'completed');
         
-        toast.success('🛡️ v12.0 BULLETPROOF Handler GPU 가속 처리 파이프라인 완료!');
+        toast.success('🎮 초고사양 하드웨어 GPU 가속 최고 품질 처리 파이프라인 완료!');
         return; // Exit early for demo
       }
       
@@ -615,11 +629,17 @@ function App() {
           action: "generate_3d_model",
           processed_image_url: processedImageUrl,
           config: {
-            mesh_config: "configs/instant-mesh-large.yaml",
+            mesh_config: "configs/instant-mesh-ultra.yaml", // 초고사양용 설정
             device: "cuda",
             enable_rigging: enableRigging,
             character_gender: characterGender,
-            output_format: "fbx"
+            output_format: "fbx",
+            // 초고사양 하드웨어 전용 3D 설정
+            mesh_resolution: 2048, // 4K 텍스처
+            vertex_count: 50000, // 고해상도 메시
+            texture_size: 2048,
+            normal_map_strength: 1.5,
+            displacement_scale: 0.1
           }
         }
       };
@@ -687,7 +707,7 @@ function App() {
         toast.error('3D model generation failed - no model files found');
       }
 
-      toast.success('🛡️ v12.0 BULLETPROOF Handler GPU 가속 처리 파이프라인 완료!');
+      toast.success('🎮 초고사양 하드웨어 GPU 가속 최고 품질 처리 파이프라인 완료!');
     } catch (error) {
       console.error('Processing error:', error);
       
@@ -817,7 +837,7 @@ function App() {
     }
     
     try {
-      toast.info('🛡️ v12.0 BULLETPROOF Handler GPU 컨테이너 테스트 중...');
+      toast.info('🎮 초고사양 하드웨어 GPU 컨테이너 테스트 중... (최고 품질 설정)');
       
           // First, test basic connectivity with GPU detection
           const healthPayload = {
@@ -875,7 +895,7 @@ function App() {
         const setupResult = await setupRunPodEnvironment();
         
         if (setupResult.status === 'COMPLETED' || setupResult.status === 'SUCCESS' || setupResult.output) {
-          toast.success('🛡️ v12.0 BULLETPROOF Handler GPU 컨테이너 초기화 완료! 안정적 가속 처리 준비됨.');
+          toast.success('🎮 초고사양 하드웨어 GPU 컨테이너 초기화 완료! 최고 품질 가속 처리 준비됨.');
         } else {
           toast.info('⚠️ 컨테이너 응답 중이나 v12.0 BULLETPROOF Handler 검증 필요');
         }
@@ -907,18 +927,19 @@ function App() {
             Pixel to Genshin 3D Converter
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Transform pixel art into Genshin Impact-style graphics and create fully textured 3D models with GPU acceleration
+            Transform pixel art into Genshin Impact-style graphics with ultra-high quality settings optimized for high-end GPU hardware
           </p>
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 max-w-4xl mx-auto">
-            <p className="text-sm text-red-200 mb-2">
-              <strong>🛡️ BULLETPROOF v12.0: Handler 실패 근본 원인 완전 해결!</strong>
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 max-w-4xl mx-auto">
+            <p className="text-sm text-green-200 mb-2">
+              <strong>🎮 초고사양 하드웨어 최적화: 최고 품질 설정 활성화!</strong>
             </p>
-            <ul className="text-xs text-red-300 text-left space-y-1 max-w-2xl mx-auto">
-              <li>• <strong>v11.0 실패 원인:</strong> RunPod 패키지 버전 충돌 + 기존 패키지 간섭</li>
-              <li>• <strong>근본 문제:</strong> 복잡한 dependency chain이 RunPod 서버리스 시작 방해</li>
-              <li>• <strong>BULLETPROOF v12.0:</strong> 환경 완전 초기화 + 검증된 RunPod 1.6.2 고정</li>
-              <li>• <strong>핵심 해결:</strong> nohup 백그라운드 실행 + 프로세스 상태 확인</li>
-              <li className="text-green-200">✅ v12.0: 절대 실패하지 않는 Handler + 완벽한 환경 제어!</li>
+            <ul className="text-xs text-green-300 text-left space-y-1 max-w-2xl mx-auto">
+              <li>• <strong>샘플링 스텝:</strong> 75 steps (기본 34 → 초고품질)</li>
+              <li>• <strong>가이던스 스케일:</strong> 12.5 (기본 7.5 → 강화된 제어)</li>
+              <li>• <strong>출력 해상도:</strong> 2048px (기본 1024px → 4K급)</li>
+              <li>• <strong>컨트롤넷:</strong> [1.8, 0.8] (기본 [1.35, 0.5] → 강화)</li>
+              <li>• <strong>3D 메시:</strong> 50,000 버텍스, 2K 텍스처</li>
+              <li className="text-yellow-200">⚡ 초고사양 GPU (RTX 4090/A100) 최적화!</li>
             </ul>
           </div>
           
