@@ -166,7 +166,7 @@ function App() {
             "echo 'Python version:' && python3 --version",
             "echo '🔍 GPU Detection:'",
             "nvidia-smi || echo '⚠️ No NVIDIA GPU detected - using CPU mode'",
-            "python3 -c \"import torch; print(f'PyTorch GPU available: {torch.cuda.is_available()}'); print(f'CUDA devices: {torch.cuda.device_count()}')\" || echo 'PyTorch not available yet'",
+            "python3 -c \\\"import torch; print('PyTorch GPU available:', torch.cuda.is_available()); print('CUDA devices:', torch.cuda.device_count())\\\" || echo 'PyTorch not available yet'",
             "echo 'Environment variables:' && env | grep CUDA || echo 'No CUDA env vars'",
             "echo '📁 Working directory setup...'",
             "WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi",
@@ -184,7 +184,7 @@ function App() {
             "echo '🔧 Fixing import statements...'",
             "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
             "echo '🔬 Final GPU verification:'",
-            "python3 -c \"import torch; print(f'✅ PyTorch version: {torch.__version__}'); print(f'✅ CUDA available: {torch.cuda.is_available()}'); print(f'✅ GPU count: {torch.cuda.device_count()}'); print(f'✅ Current device: {torch.cuda.current_device() if torch.cuda.is_available() else \"CPU\"}')\"",
+            "python3 -c \\\"import torch; print('✅ PyTorch version:', torch.__version__); print('✅ CUDA available:', torch.cuda.is_available()); print('✅ GPU count:', torch.cuda.device_count()); print('✅ Current device:', torch.cuda.current_device() if torch.cuda.is_available() else 'CPU')\\\"",
             "echo '🎯 Container ready for processing!'"
           ]
         }
@@ -602,37 +602,32 @@ function App() {
   };
 
   const copyCommandToClipboard = async () => {
-    const command = `# GPU-ENABLED Container Start Command v5.0 - Fixes CPU-only issue
-# This command ensures proper GPU detection and CUDA PyTorch installation
-
-bash -c "set -e; echo '🚀 GPU Container Setup v5.0'; echo '🔍 GPU Detection:'; nvidia-smi || echo '⚠️ GPU not available'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \"📂 Working in: \$WORKDIR\"; cd \$WORKDIR; rm -rf genshin-art-3d-model; echo '📥 Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo '📦 Installing GPU-enabled dependencies...'; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; echo '🔧 Fixing imports...'; python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"; echo '🔬 GPU Verification:'; python3 -c \"import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}'); print(f'GPU Count: {torch.cuda.device_count()}'); print(f'Device: {torch.cuda.current_device() if torch.cuda.is_available() else \"CPU\"}')\"; echo '🎯 Starting handler...'; python3 handler.py"
-
-# WHAT THIS VERSION FIXES:
-# ❌ Old problem: PyTorch using CPU instead of GPU
-# ❌ Old problem: Missing AI/ML dependencies for image processing
-# ✅ New solution: 
-#   - Installs CUDA-enabled PyTorch specifically for CUDA 11.8
-#   - Adds proper GPU detection and verification
-#   - Installs required ML packages (diffusers, transformers, accelerate)
-#   - Shows clear GPU status in logs
-#   - Ensures container uses GPU when available
-
-# CONTAINER REQUIREMENTS:
-# Image: runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
-# GPU: Any CUDA-compatible GPU (RTX 3090, 4090, A100, etc.)
-# VRAM: Minimum 8GB recommended for image processing
-
-# Manual verification commands:
-cd /workspace || cd /app || cd /
-nvidia-smi
-python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
-python3 -c "import torch; print('GPU Count:', torch.cuda.device_count())"
-python3 -c "import torch; print('Device Name:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
-
-# EXPECTED OUTPUT when working:
-# CUDA: True
-# GPU Count: 1 (or more)
-# Device Name: NVIDIA RTX 4090 (or your GPU model)`;
+    const command = "# GPU-ENABLED Container Start Command v5.0 - Fixes CPU-only issue\n" +
+"# This command ensures proper GPU detection and CUDA PyTorch installation\n\n" +
+"bash -c \"set -e; echo '🚀 GPU Container Setup v5.0'; echo '🔍 GPU Detection:'; nvidia-smi || echo '⚠️ GPU not available'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \\\"📂 Working in: \\$WORKDIR\\\"; cd \\$WORKDIR; rm -rf genshin-art-3d-model; echo '📥 Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo '📦 Installing GPU-enabled dependencies...'; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; echo '🔧 Fixing imports...'; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\\\"; echo '🔬 GPU Verification:'; python3 -c \\\"import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU Count:', torch.cuda.device_count()); print('Device:', torch.cuda.current_device() if torch.cuda.is_available() else 'CPU')\\\"; echo '🎯 Starting handler...'; python3 handler.py\"\n\n" +
+"# WHAT THIS VERSION FIXES:\n" +
+"# ❌ Old problem: PyTorch using CPU instead of GPU\n" +
+"# ❌ Old problem: Missing AI/ML dependencies for image processing\n" +
+"# ✅ New solution:\n" +
+"#   - Installs CUDA-enabled PyTorch specifically for CUDA 11.8\n" +
+"#   - Adds proper GPU detection and verification\n" +
+"#   - Installs required ML packages (diffusers, transformers, accelerate)\n" +
+"#   - Shows clear GPU status in logs\n" +
+"#   - Ensures container uses GPU when available\n\n" +
+"# CONTAINER REQUIREMENTS:\n" +
+"# Image: runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04\n" +
+"# GPU: Any CUDA-compatible GPU (RTX 3090, 4090, A100, etc.)\n" +
+"# VRAM: Minimum 8GB recommended for image processing\n\n" +
+"# Manual verification commands:\n" +
+"cd /workspace || cd /app || cd /\n" +
+"nvidia-smi\n" +
+"python3 -c \"import torch; print('CUDA:', torch.cuda.is_available())\"\n" +
+"python3 -c \"import torch; print('GPU Count:', torch.cuda.device_count())\"\n" +
+"python3 -c \"import torch; print('Device Name:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')\"\n\n" +
+"# EXPECTED OUTPUT when working:\n" +
+"# CUDA: True\n" +
+"# GPU Count: 1 (or more)\n" +
+"# Device Name: NVIDIA RTX 4090 (or your GPU model)";
     
     try {
       await navigator.clipboard.writeText(command);
@@ -664,7 +659,7 @@ python3 -c "import torch; print('Device Name:', torch.cuda.get_device_name(0) if
                 "echo '🎮 GPU Detection:'",
                 "nvidia-smi || echo '❌ NVIDIA GPU not detected'",
                 "echo '🧠 PyTorch GPU Check:'",
-                "python3 -c \"import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU count: {torch.cuda.device_count()}')\" 2>/dev/null || echo 'PyTorch not installed or GPU not available'",
+                "python3 -c \\\"import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('GPU count:', torch.cuda.device_count())\\\" 2>/dev/null || echo 'PyTorch not installed or GPU not available'",
                 "echo '📊 Available packages:'",
                 "pip list | grep -E '(torch|cuda|gpu)' || echo 'No GPU-related packages found'",
                 "echo '✅ Health check completed'"
@@ -774,7 +769,7 @@ python3 -c "import torch; print('Device Name:', torch.cuda.get_device_name(0) if
                       <p style={{ fontWeight: "bold", marginBottom: "8px", color: "#ff6b6b" }}>⚠️ GPU 필수: CPU 전용으로 실행하면 매우 느림!</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
                         <code style={{ color: "#7d8590", fontSize: "10px", wordBreak: "break-all" }}>
-                          bash -c "set -e; echo '🚀 GPU Container Setup v5.0'; nvidia-smi; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; cd \$WORKDIR; rm -rf genshin-art-3d-model; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content);\"; python3 -c \"import torch; print(f'CUDA: {torch.cuda.is_available()}')\"; python3 handler.py"
+                          bash -c "set -e; echo '🚀 GPU Container Setup v5.0'; nvidia-smi; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; cd \\$WORKDIR; rm -rf genshin-art-3d-model; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content);\\\"; python3 -c \\\"import torch; print('CUDA:', torch.cuda.is_available())\\\"; python3 handler.py"
                         </code>
                       </div>
                       <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
