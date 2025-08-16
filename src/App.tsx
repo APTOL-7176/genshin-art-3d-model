@@ -521,6 +521,8 @@ function App() {
       }
     });
   };
+
+  const createGenshinStyleImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const canvas = document.createElement('canvas');
