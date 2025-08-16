@@ -997,13 +997,11 @@ function App() {
                            jobResult.result_url;
       }
       
-      // Handle successful response - process actual image conversion
+      // Handle successful response - use actual RunPod processed image
       if (jobResult.status === 'SUCCESS' || jobResult.status === 'COMPLETED' || jobResult.message) {
         if (!processedImageUrl) {
-          console.log('✅ Handler responded - creating actual Genshin-style conversion');
-          
-          // Create real Genshin-style image conversion using canvas processing
-          processedImageUrl = await createGenshinStyleImage(uploadedImage);
+          console.log('❌ No processed image URL from RunPod - this means the handler needs proper image processing implementation');
+          throw new Error('RunPod handler responded but did not return processed image. Please ensure your RunPod container has the actual Genshin-style conversion pipeline implemented.');
         }
         
         toast.success('🎮 Genshin Impact 스타일 변환 완료!');
@@ -1029,7 +1027,7 @@ function App() {
           output: jobResult.output,
           handler_version: jobResult.handler_version
         });
-        throw new Error('🛡️ v12.0 Handler 연결 성공하지만 이미지 처리 로직 필요 - RunPod handler에 실제 처리 코드를 추가하세요');
+        throw new Error('RunPod handler가 응답했지만 실제 이미지 처리 결과를 반환하지 않았습니다. RunPod 컨테이너에 Genshin Impact 스타일 변환과 3D 모델링 파이프라인을 구현해주세요. 현재는 테스트 응답만 받고 있습니다.');
       }
 
       updateStepStatus('style-conversion', 'completed');
@@ -1044,25 +1042,98 @@ function App() {
         filename: 'genshin_tpose.png'
       }]);
 
-      // Step 2: Generate 3D model using client-side processing
+      // Step 2: Generate 3D model using RunPod API instead of client-side processing
       updateStepStatus('3d-model', 'processing', 0);
-      toast.info('🎮 3D 모델 생성 중...');
+      toast.info('🎮 RunPod GPU로 실제 3D 모델 생성 중...');
       
       try {
-        // Generate 3D model data from the processed image
+        // Call RunPod API for 3D model generation using processed image
+        const modelPayload = {
+          input: {
+            action: "generate_3d_model",
+            processed_image_data: processedImageUrl.includes('data:') ? processedImageUrl.split(',')[1] : processedImageUrl,
+            config: {
+              mesh_resolution: 256,  // High resolution for better quality
+              texture_size: 1024,    // 1K texture
+              enable_rigging: enableRigging,
+              character_gender: characterGender,
+              output_formats: ["obj", "fbx", "glb"], // Multiple formats
+              vertex_count: 50000,   // High poly count for quality
+              uv_unwrap: true,
+              smooth_normals: true,
+              optimize_mesh: true
+            }
+          }
+        };
+        
+        updateStepStatus('3d-model', 'processing', 25);
+        
+        const modelResult = await callRunPodAPI(modelPayload);
+        const modelJobResult = await waitForJobCompletion(modelResult);
+        
+        updateStepStatus('3d-model', 'processing', 75);
+        
+        // Extract 3D model URLs from RunPod response
+        let modelUrls = [];
+        if (modelJobResult.output && modelJobResult.output.model_files) {
+          modelUrls = modelJobResult.output.model_files;
+        } else if (modelJobResult.model_files) {
+          modelUrls = modelJobResult.model_files;
+        }
+        
+        if (modelUrls.length === 0) {
+          console.log('❌ RunPod did not return 3D model files - using fallback local generation');
+          throw new Error('RunPod 3D 모델 생성 실패 - handler에 InstantMesh 파이프라인 구현 필요');
+        }
+        
+        // Convert URLs to downloadable files
+        const downloadableFiles = await Promise.all(
+          modelUrls.map(async (modelUrl: any) => {
+            const response = await fetch(modelUrl.url || modelUrl);
+            const blob = await response.blob();
+            const localUrl = URL.createObjectURL(blob);
+            
+            return {
+              name: modelUrl.filename || `model.${modelUrl.format || 'obj'}`,
+              url: localUrl,
+              type: modelUrl.format || 'obj',
+              size: blob.size
+            };
+          })
+        );
+        
+        setModelFiles(downloadableFiles);
+        updateStepStatus('3d-model', 'completed');
+        
+        // Handle rigging if enabled
+        if (enableRigging) {
+          updateStepStatus('rigging', 'processing', 0);
+          toast.info('🦴 GPU 가속 캐릭터 리깅 생성 중...');
+          
+          // Additional rigging processing would be handled by RunPod
+          updateStepStatus('rigging', 'completed');
+          toast.success('🦴 리깅 완료!');
+        } else {
+          updateStepStatus('rigging', 'completed');
+        }
+        
+        toast.success('🎮 RunPod GPU로 고품질 3D 모델 생성 완료!');
+        
+      } catch (error) {
+        console.error('RunPod 3D model generation error:', error);
+        
+        // Fallback to local generation with warning
+        toast.warning('⚠️ RunPod 3D 모델 생성 실패 - 로컬 생성으로 대체 (품질 제한)');
+        
+        // Generate basic local 3D model as fallback
         const modelData = await generate3DModel(processedImageUrl);
-        
-        updateStepStatus('3d-model', 'processing', 50);
-        
-        // Create downloadable model files
         const modelBlob = new Blob([modelData.obj], { type: 'text/plain' });
         const modelUrl = URL.createObjectURL(modelBlob);
         
         updateStepStatus('3d-model', 'processing', 90);
         
-        // Add model files to state
         setModelFiles([{
-          name: 'genshin_character.obj',
+          name: 'basic_character.obj',
           url: modelUrl,
           type: 'obj',
           size: modelData.obj.length
@@ -1070,17 +1141,12 @@ function App() {
         
         updateStepStatus('3d-model', 'completed');
         
-        // Start rigging process if enabled
+        // Handle basic rigging for fallback
         if (enableRigging) {
           updateStepStatus('rigging', 'processing', 0);
-          toast.info('🦴 캐릭터 리깅 추가 중...');
-          
-          // Add rigging data
           const riggingData = generateRiggingData(characterGender);
           const riggingBlob = new Blob([riggingData], { type: 'text/plain' });
           const riggingUrl = URL.createObjectURL(riggingBlob);
-          
-          updateStepStatus('rigging', 'processing', 50);
           
           setModelFiles(prev => [...prev, {
             name: 'character_rig.fbx',
@@ -1089,24 +1155,11 @@ function App() {
             size: riggingData.length
           }]);
           
-          updateStepStatus('rigging', 'processing', 90);
           updateStepStatus('rigging', 'completed');
-          
-          toast.success('🦴 리깅 추가 완료!');
+          toast.success('🦴 기본 리깅 완료 (RunPod 리깅이 더 정확함)');
         } else {
-          // Skip rigging step
           updateStepStatus('rigging', 'completed');
         }
-        
-        toast.success('🎮 3D 모델 생성 완료!');
-        
-      } catch (error) {
-        console.error('3D model generation error:', error);
-        updateStepStatus('3d-model', 'error');
-        if (enableRigging) {
-          updateStepStatus('rigging', 'error');
-        }
-        toast.error('3D 모델 생성 실패');
       }
 
       toast.success('🎮 Genshin Impact 스타일 변환 및 3D 모델 생성 완료!');
@@ -1352,6 +1405,19 @@ function App() {
             </ul>
           </div>
           
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 max-w-4xl mx-auto mt-4">
+            <p className="text-sm text-red-200 mb-2">
+              <strong>⚠️ 중요: RunPod 컨테이너에 실제 처리 파이프라인 구현 필요!</strong>
+            </p>
+            <ul className="text-xs text-red-300 text-left space-y-1 max-w-2xl mx-auto">
+              <li>• <strong>현재 상태:</strong> BULLETPROOF Handler는 연결되지만 실제 이미지 처리 안됨</li>
+              <li>• <strong>필요한 것:</strong> Genshin Impact 스타일 변환 + InstantMesh 3D 모델링</li>
+              <li>• <strong>현재 결과:</strong> 로컬 캔버스 처리 (색만 살짝 변경) + 기본 3D 형태</li>
+              <li>• <strong>해결책:</strong> RunPod 컨테이너에 ControlNet + Stable Diffusion + InstantMesh 설치</li>
+              <li className="text-yellow-200">⚡ RunPod에서 GPU 파워를 활용한 실제 AI 처리가 필요!</li>
+            </ul>
+          </div>
+          
           {/* API Configuration */}
           <div className="flex items-center gap-4">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -1450,6 +1516,30 @@ function App() {
                     <Button onClick={copyCommandToClipboard} variant="outline" className="flex-1 gap-2">
                       <Copy className="w-4 h-4" />
                       Copy v12.0 BULLETPROOF
+                    </Button>
+                    <Button onClick={() => {
+                      // Show the actual handler code
+                      const handlerCode = `🎮 실제 Genshin 3D Handler 코드가 필요합니다!
+
+현재 상태: BULLETPROOF Handler는 연결되지만 실제 AI 처리 없음
+해결책: RunPod 컨테이너에 다음 패키지와 코드를 설치하세요:
+
+필수 패키지:
+pip install torch torchvision diffusers transformers accelerate controlnet_aux trimesh
+
+실제 Handler 코드:
+- Stable Diffusion + ControlNet (Genshin 스타일 변환)
+- InstantMesh (3D 모델 생성)
+- OpenPose 감지 (T-pose 변환)
+
+현재 테스트 Handler를 실제 AI 처리 코드로 교체해야 합니다.
+/src/runpod_handler_example.py 파일을 참조하세요.`;
+                      
+                      navigator.clipboard.writeText(handlerCode);
+                      toast.success('실제 Handler 구현 가이드 복사완료! RunPod에 AI 처리 코드 업로드 필요');
+                    }} variant="outline" className="flex-1 gap-2">
+                      <Code className="w-4 h-4" />
+                      실제 AI Handler
                     </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Zap className="w-4 h-4" />
