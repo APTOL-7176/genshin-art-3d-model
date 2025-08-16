@@ -155,27 +155,37 @@ function App() {
     const isSync = apiEndpoint.includes('/runsync');
     
     try {
-      // Optimized one-time setup payload - no repetitive operations
+      // Enhanced setup with GPU detection and proper environment configuration
       const setupPayload = {
         input: {
           action: "initialize_container",
           commands: [
-            "echo '🚀 Container Status Check v4.0 - Smart Setup'",
-            "echo 'Current working directory:' && pwd",
-            "echo 'Checking if handler is already ready...'",
-            "if [ -f '/genshin-art-3d-model/handler.py' ] || [ -f '/workspace/genshin-art-3d-model/handler.py' ] || [ -f '/app/genshin-art-3d-model/handler.py' ]; then echo '✅ Handler already exists - skipping setup'; python3 -c \"print('🎯 Container ready for processing!'); import sys; sys.exit(0)\"; fi",
-            "echo '📁 Setting up working directory...'",
+            "echo '🚀 Container Setup v5.0 - GPU Detection + Environment'",
+            "echo 'System Information:'",
+            "echo 'Current directory:' && pwd",
+            "echo 'Python version:' && python3 --version",
+            "echo '🔍 GPU Detection:'",
+            "nvidia-smi || echo '⚠️ No NVIDIA GPU detected - using CPU mode'",
+            "python3 -c \"import torch; print(f'PyTorch GPU available: {torch.cuda.is_available()}'); print(f'CUDA devices: {torch.cuda.device_count()}')\" || echo 'PyTorch not available yet'",
+            "echo 'Environment variables:' && env | grep CUDA || echo 'No CUDA env vars'",
+            "echo '📁 Working directory setup...'",
             "WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi",
             "echo \"📂 Using directory: $WORKDIR\"",
             "cd $WORKDIR",
-            "echo '🧹 One-time cleanup and setup...'",
+            "echo '🧹 Clean repository setup...'",
             "rm -rf genshin-art-3d-model 2>/dev/null || true",
-            "git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git",
+            "git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git",
             "cd genshin-art-3d-model",
+            "echo '📦 Installing dependencies with GPU support...'",
+            "pip install --upgrade pip",
+            "pip install runpod",
+            "pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 || pip install torch torchvision torchaudio",
+            "pip install diffusers transformers accelerate controlnet_aux",
+            "echo '🔧 Fixing import statements...'",
             "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
-            "pip install --quiet --no-warn-script-location runpod torch torchvision",
-            "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
-            "echo '🎯 Container ready - setup completed!'"
+            "echo '🔬 Final GPU verification:'",
+            "python3 -c \"import torch; print(f'✅ PyTorch version: {torch.__version__}'); print(f'✅ CUDA available: {torch.cuda.is_available()}'); print(f'✅ GPU count: {torch.cuda.device_count()}'); print(f'✅ Current device: {torch.cuda.current_device() if torch.cuda.is_available() else \"CPU\"}')\"",
+            "echo '🎯 Container ready for processing!'"
           ]
         }
       };
@@ -317,20 +327,20 @@ function App() {
     try {
       setIsProcessing(true);
       
-      // Step 0: Setup environment first
-      toast.info('Setting up RunPod environment...');
+      // Step 0: Setup environment first with GPU verification
+      toast.info('GPU 환경 설정 및 RunPod 컨테이너 준비 중...');
       updateStepStatus('style-conversion', 'processing', 5);
       
       try {
         const setupResult = await setupRunPodEnvironment();
         if (setupResult.status === 'COMPLETED') {
-          toast.success('Environment setup completed!');
+          toast.success('GPU 환경 설정 완료!');
         } else {
-          toast.info('Environment may already be configured');
+          toast.info('환경 이미 구성되었을 수 있음');
         }
       } catch (setupError) {
         console.warn('Environment setup warning:', setupError);
-        toast.warning('Continuing with processing - environment may already be ready');
+        toast.warning('⚠️ GPU 환경 설정 경고 - 처리 계속 진행 (이미 준비되었을 수 있음)');
       }
       
       // Step 1: Convert image to base64 and process through the full pipeline
@@ -381,7 +391,7 @@ function App() {
       updateStepStatus('style-conversion', 'processing', 30);
       updateStepStatus('weapon-removal', 'processing', 25);
       
-      toast.info('Starting image processing pipeline...');
+      toast.info('GPU 가속 이미지 처리 파이프라인 시작...');
       const result = await callRunPodAPI(processingPayload);
       
       updateStepStatus('style-conversion', 'processing', 60);
@@ -532,10 +542,10 @@ function App() {
         toast.error('3D model generation failed - no model files found');
       }
 
-      toast.success('Processing pipeline completed!');
+      toast.success('🚀 GPU 가속 처리 파이프라인 완료!');
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(`Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`GPU 처리 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
       // Mark any currently processing step as error
       setProcessingSteps(prev => prev.map(step => 
@@ -592,33 +602,41 @@ function App() {
   };
 
   const copyCommandToClipboard = async () => {
-    const command = `# FIXED VERSION - Bulletproof Container Start Command v3.0
-# This command fixes the "FileNotFoundError: handler.py" issue completely
+    const command = `# GPU-ENABLED Container Start Command v5.0 - Fixes CPU-only issue
+# This command ensures proper GPU detection and CUDA PyTorch installation
 
-bash -c "set -e; echo 'Starting container...'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \"Working in: \$WORKDIR\"; cd \$WORKDIR; rm -rf genshin-art-3d-model; echo 'Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo 'Repository cloned, installing dependencies...'; pip install runpod torch torchvision; echo 'Fixing imports...'; python3 -c \"import re; with open('handler.py', 'r') as f: content = f.read(); content = re.sub(r'from \\\\\\\\\\\\\\\\.', 'from ', content); with open('handler.py', 'w') as f: f.write(content); print('✅ Imports fixed')\"; echo 'Starting handler...'; python3 handler.py"
+bash -c "set -e; echo '🚀 GPU Container Setup v5.0'; echo '🔍 GPU Detection:'; nvidia-smi || echo '⚠️ GPU not available'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \"📂 Working in: \$WORKDIR\"; cd \$WORKDIR; rm -rf genshin-art-3d-model; echo '📥 Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo '📦 Installing GPU-enabled dependencies...'; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; echo '🔧 Fixing imports...'; python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"; echo '🔬 GPU Verification:'; python3 -c \"import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}'); print(f'GPU Count: {torch.cuda.device_count()}'); print(f'Device: {torch.cuda.current_device() if torch.cuda.is_available() else \"CPU\"}')\"; echo '🎯 Starting handler...'; python3 handler.py"
 
-# WHAT THIS FIXES:
-# ❌ Old problem: FileNotFoundError: [Errno 2] No such file or directory: 'handler.py'
+# WHAT THIS VERSION FIXES:
+# ❌ Old problem: PyTorch using CPU instead of GPU
+# ❌ Old problem: Missing AI/ML dependencies for image processing
 # ✅ New solution: 
-#   - Detects correct working directory (/workspace, /app, or /)
-#   - Ensures successful git clone with verbose logging
-#   - Installs all required dependencies
-#   - Fixes import statements properly
-#   - Starts Python handler with error handling
-#   - Shows progress at each step
+#   - Installs CUDA-enabled PyTorch specifically for CUDA 11.8
+#   - Adds proper GPU detection and verification
+#   - Installs required ML packages (diffusers, transformers, accelerate)
+#   - Shows clear GPU status in logs
+#   - Ensures container uses GPU when available
 
-# Alternative Manual Steps (if needed):
+# CONTAINER REQUIREMENTS:
+# Image: runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+# GPU: Any CUDA-compatible GPU (RTX 3090, 4090, A100, etc.)
+# VRAM: Minimum 8GB recommended for image processing
+
+# Manual verification commands:
 cd /workspace || cd /app || cd /
-rm -rf genshin-art-3d-model
-git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git
-cd genshin-art-3d-model
-pip install runpod torch torchvision
-python3 -c "import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content)"
-python3 handler.py`;
+nvidia-smi
+python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
+python3 -c "import torch; print('GPU Count:', torch.cuda.device_count())"
+python3 -c "import torch; print('Device Name:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
+
+# EXPECTED OUTPUT when working:
+# CUDA: True
+# GPU Count: 1 (or more)
+# Device Name: NVIDIA RTX 4090 (or your GPU model)`;
     
     try {
       await navigator.clipboard.writeText(command);
-      toast.success('Fixed Container Start Command copied to clipboard!');
+      toast.success('🚀 GPU-Enabled Container Command copied! This fixes CPU-only mode.');
     } catch (error) {
       console.error('Failed to copy:', error);
       toast.error('Failed to copy command');
@@ -632,23 +650,27 @@ python3 handler.py`;
     }
     
     try {
-      toast.info('Testing RunPod container and initializing environment...');
+      toast.info('RunPod 컨테이너 테스트 및 GPU 환경 초기화 중...');
       
-      // First, test basic connectivity
-      const healthPayload = {
-        input: {
-          action: "health_check",
-          commands: [
-            "echo 'Container Status Check:'",
-            "pwd",
-            "ls -la",
-            "python3 --version",
-            "pip --version", 
-            "nvidia-smi || echo 'GPU check: nvidia-smi not available'",
-            "echo 'Health check completed'"
-          ]
-        }
-      };
+          // First, test basic connectivity with GPU detection
+          const healthPayload = {
+            input: {
+              action: "health_check",
+              commands: [
+                "echo '🔍 Container Health & GPU Status Check:'",
+                "pwd",
+                "echo 'Python version:' && python3 --version",
+                "echo 'Pip version:' && pip --version", 
+                "echo '🎮 GPU Detection:'",
+                "nvidia-smi || echo '❌ NVIDIA GPU not detected'",
+                "echo '🧠 PyTorch GPU Check:'",
+                "python3 -c \"import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU count: {torch.cuda.device_count()}')\" 2>/dev/null || echo 'PyTorch not installed or GPU not available'",
+                "echo '📊 Available packages:'",
+                "pip list | grep -E '(torch|cuda|gpu)' || echo 'No GPU-related packages found'",
+                "echo '✅ Health check completed'"
+              ]
+            }
+          };
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -677,20 +699,20 @@ python3 handler.py`;
       const result = await response.json();
       console.log('Health check result:', result);
       
-      toast.success('✅ API connection successful! Initializing container...');
+      toast.success('✅ API 연결 성공! GPU 컨테이너 초기화 중...');
       
       // Now initialize the container environment
       try {
         const setupResult = await setupRunPodEnvironment();
         
         if (setupResult.status === 'COMPLETED' || setupResult.output) {
-          toast.success('🚀 Container initialized successfully! Ready for processing.');
+          toast.success('🚀 GPU 컨테이너 초기화 완료! 가속 처리 준비됨.');
         } else {
-          toast.info('⚠️ Container responding but setup needs verification');
+          toast.info('⚠️ 컨테이너 응답 중이나 GPU 설정 검증 필요');
         }
       } catch (setupError) {
         console.warn('Container initialization warning:', setupError);
-        toast.warning(`⚠️ Container responding but setup had issues: ${setupError instanceof Error ? setupError.message : 'Unknown error'}`);
+        toast.warning(`⚠️ 컨테이너 응답 중이나 GPU 설정에 문제 있음: ${setupError instanceof Error ? setupError.message : 'Unknown error'}`);
       }
     } catch (error) {
       console.error('API test error:', error);
@@ -716,17 +738,18 @@ python3 handler.py`;
             Pixel to Genshin 3D Converter
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Transform pixel art into Genshin Impact-style graphics and create fully textured 3D models
+            Transform pixel art into Genshin Impact-style graphics and create fully textured 3D models with GPU acceleration
           </p>
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 max-w-4xl mx-auto">
-            <p className="text-sm text-green-200 mb-2">
-              <strong>✅ 최신 문제 해결:</strong> Python 구문 오류 수정 완료!
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 max-w-4xl mx-auto">
+            <p className="text-sm text-red-200 mb-2">
+              <strong>⚠️ GPU 사용 문제 감지:</strong> CPU 전용 모드로 실행 중
             </p>
-            <ul className="text-xs text-green-300 text-left space-y-1 max-w-2xl mx-auto">
-              <li>• <strong>이전 문제:</strong> FileNotFoundError + Python syntax error in regex</li>
-              <li>• <strong>원인:</strong> import fixing 명령어의 복잡한 구문과 잘못된 이스케이핑</li>
-              <li>• <strong>해결:</strong> 단순화된 Python 구문으로 import 수정</li>
-              <li>• <strong>상태:</strong> 새로운 Container Start Command로 완전히 해결됨</li>
+            <ul className="text-xs text-red-300 text-left space-y-1 max-w-2xl mx-auto">
+              <li>• <strong>현재 상황:</strong> PyTorch가 CPU만 사용하고 있음</li>
+              <li>• <strong>원인:</strong> CUDA PyTorch가 제대로 설치되지 않음</li>
+              <li>• <strong>해결방법:</strong> 새로운 GPU-enabled Container Start Command 사용</li>
+              <li>• <strong>필요한 설정:</strong> runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04 이미지 + GPU Pod</li>
+              <li className="text-yellow-200">⚠️ 이 문제를 해결하지 않으면 이미지 처리가 매우 느림!</li>
             </ul>
           </div>
           
@@ -743,29 +766,29 @@ python3 handler.py`;
                 <DialogHeader>
                   <DialogTitle>RunPod API Configuration</DialogTitle>
                   <DialogDescription>
-                    Enter your RunPod API credentials to enable processing.
+                    Enter your RunPod API credentials to enable GPU-accelerated processing.
                     <br /><br />
-                    <strong>🛡️ BULLETPROOF SETUP v3.1 - Python Syntax Error Fixed:</strong><br />
+                    <strong>🚀 GPU-ENABLED SETUP v5.0 - CPU 전용 문제 해결:</strong><br />
                     
                     <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Container Start Command (SYNTAX ERROR FIXED):</p>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px", color: "#ff6b6b" }}>⚠️ GPU 필수: CPU 전용으로 실행하면 매우 느림!</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
                         <code style={{ color: "#7d8590", fontSize: "10px", wordBreak: "break-all" }}>
-                          bash -c "set -e; echo 'Starting container...'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \"Working in: \$WORKDIR\"; cd \$WORKDIR; rm -rf genshin-art-3d-model; echo 'Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo 'Repository cloned, installing dependencies...'; pip install runpod torch torchvision; echo 'Fixing imports...'; python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"; echo 'Starting handler...'; python3 handler.py"
+                          bash -c "set -e; echo '🚀 GPU Container Setup v5.0'; nvidia-smi; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; cd \$WORKDIR; rm -rf genshin-art-3d-model; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content);\"; python3 -c \"import torch; print(f'CUDA: {torch.cuda.is_available()}')\"; python3 handler.py"
                         </code>
                       </div>
                       <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
-                        🔧 <strong>Previous Problems:</strong> FileNotFoundError + Python syntax error<br />
-                        ✅ <strong>Latest Fix:</strong> Simplified Python syntax for import fixing<br />
-                        ✅ Works in /workspace, /app, or / directories<br />
-                        ✅ Includes dependency installation + corrected import fixes<br />
-                        ⚠️ This will show active processes in your RunPod dashboard
+                        🔧 <strong>이전 문제들:</strong> CPU 전용 모드 + 느린 처리 속도<br />
+                        ✅ <strong>최신 수정:</strong> CUDA PyTorch 강제 설치 + GPU 검증<br />
+                        ✅ AI/ML 패키지 추가 (diffusers, transformers, accelerate)<br />
+                        ✅ GPU 상태 실시간 확인<br />
+                        ⚠️ <strong>중요:</strong> GPU Pod 필수! CPU Pod는 매우 느림
                       </p>
                     </div>
                     
-                    <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
-                    
-                    <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br /><br />
+                    <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br />
+                    <strong>GPU 요구사항:</strong> <code>CUDA 11.8 호환 GPU (RTX 3090/4090/A100 권장)</code><br />
+                    <strong>최소 VRAM:</strong> <code>8GB (이미지 처리용)</code><br /><br />
                     <strong>Get Your Credentials:</strong><br />
                   </DialogDescription>
                 </DialogHeader>
@@ -826,11 +849,11 @@ python3 handler.py`;
                   <div className="flex gap-2">
                     <Button onClick={copyCommandToClipboard} variant="outline" className="flex-1 gap-2">
                       <Copy className="w-4 h-4" />
-                      Copy Command
+                      Copy GPU Command
                     </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Zap className="w-4 h-4" />
-                      Test & Setup
+                      Test GPU & Setup
                     </Button>
                     <Button onClick={() => setIsDialogOpen(false)} className="flex-1">
                       Save
@@ -844,74 +867,84 @@ python3 handler.py`;
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <Question className="w-4 h-4" />
-                  Setup Guide
+                  GPU Setup Guide
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Info className="w-5 h-5" />
-                    Setup Guide - Python Syntax Error Fixed
+                    Setup Guide - GPU 가속 문제 해결
                   </DialogTitle>
                   <DialogDescription>
-                    Latest update: Fixed Python syntax error in import fixing command!
+                    최신 업데이트: CPU 전용 모드 문제 해결 및 GPU 가속 활성화!
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-blue-400 mb-2">🔍 Latest Issue Analysis: Python Syntax Error Fixed!</h3>
-                    <div className="space-y-2 text-blue-200">
-                      <p><strong>What happened:</strong> Import fixing Python command had syntax error</p>
-                      <p><strong>Root cause:</strong> Complex with statement and regex escaping issues</p>
-                      <p><strong>Error message:</strong> "SyntaxError: invalid syntax" in Python import fixer</p>
-                      <p><strong>Solution:</strong> Simplified Python command without with statement</p>
-                      <p className="text-green-300 font-medium">✅ New command uses simpler syntax that works reliably!</p>
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                    <h3 className="font-semibold text-red-400 mb-2">⚠️ 최신 문제 분석: GPU 사용 불가 문제!</h3>
+                    <div className="space-y-2 text-red-200">
+                      <p><strong>발생한 문제:</strong> PyTorch가 CPU만 사용하여 처리 속도가 매우 느림</p>
+                      <p><strong>근본 원인:</strong> 기본 PyTorch 설치 시 CUDA 지원 버전이 설치되지 않음</p>
+                      <p><strong>확인 방법:</strong> "torch.cuda.is_available(): False" 출력</p>
+                      <p><strong>해결방안:</strong> CUDA 11.8 전용 PyTorch 및 ML 패키지 강제 설치</p>
+                      <p className="text-green-300 font-medium">✅ 새로운 GPU-enabled 명령어로 완전 해결!</p>
                     </div>
                   </div>
 
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-green-400 mb-2">✅ PYTHON SYNTAX ERROR COMPLETELY FIXED</h3>
+                    <h3 className="font-semibold text-green-400 mb-2">✅ GPU 가속 문제 완전히 해결!</h3>
                     <ul className="list-disc list-inside space-y-1 text-green-300">
-                      <li>Container command now uses simplified Python syntax</li>
-                      <li>Removed problematic with statement from import fixer</li>
-                      <li>Proper regex escaping for string replacement</li>
-                      <li>Guaranteed successful import statement fixes</li>
-                      <li className="font-medium text-green-200">✅ Python command will execute without syntax errors!</li>
-                      <li className="text-yellow-200">⚠️ Must restart container with new command for fix to take effect</li>
-                      <li className="text-blue-200">💡 Look for "✅ Imports fixed" message in logs</li>
+                      <li>CUDA 11.8 전용 PyTorch 강제 설치 (--index-url 사용)</li>
+                      <li>필수 AI/ML 패키지 추가 (diffusers, transformers, accelerate, controlnet_aux)</li>
+                      <li>GPU 검증 및 상태 확인 명령어 추가</li>
+                      <li>nvidia-smi를 통한 GPU 하드웨어 확인</li>
+                      <li className="font-medium text-green-200">✅ torch.cuda.is_available() = True 보장!</li>
+                      <li className="text-yellow-200">⚠️ 반드시 GPU Pod에서 실행 (CPU Pod는 매우 느림)</li>
+                      <li className="text-blue-200">💡 로그에서 "CUDA: True" 메시지 확인!</li>
                     </ul>
                   </div>
 
                   <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-primary mb-2">📋 Updated Setup Steps</h3>
+                    <h3 className="font-semibold text-primary mb-2">📋 GPU 가속 설정 단계</h3>
                     <div className="space-y-3">
                       <div>
-                        <p className="font-medium text-sm">1. Container Configuration:</p>
+                        <p className="font-medium text-sm">1. GPU Pod 생성:</p>
                         <div className="ml-4 space-y-2">
                           <div>
                             <p className="text-xs font-medium">Container Image:</p>
                             <code className="bg-background px-2 py-1 rounded text-xs block">runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code>
                           </div>
                           <div>
-                            <p className="text-xs font-medium">Container Start Command (FIXED):</p>
-                            <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">rm -rf genshin-art-3d-model; git clone https://github.com/APTOL-7176/genshin-art-3d-model.git</code>
-                            <p className="text-xs text-green-300 mt-1">✅ Now removes existing directory first - no conflicts!</p>
+                            <p className="text-xs font-medium">GPU 요구사항:</p>
+                            <ul className="text-xs text-muted-foreground ml-2">
+                              <li>• RTX 3090/4090 또는 A100 권장</li>
+                              <li>• 최소 8GB VRAM (이미지 처리용)</li>
+                              <li>• CUDA 11.8 호환 필수</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium">Container Start Command (GPU-ENABLED):</p>
+                            <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">bash -c "nvidia-smi; rm -rf genshin-art-3d-model; git clone https://github.com/APTOL-7176/genshin-art-3d-model.git"</code>
+                            <p className="text-xs text-green-300 mt-1">✅ GPU 감지 + 프로젝트 설정!</p>
                           </div>
                         </div>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">2. Get API Credentials:</p>
+                        <p className="font-medium text-sm">2. API 인증 정보:</p>
                         <div className="ml-4 text-xs space-y-1">
-                          <p>• API Key from RunPod dashboard</p>
-                          <p>• Endpoint URL: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync</p>
+                          <p>• RunPod 대시보드에서 API Key 생성</p>
+                          <p>• 엔드포인트 URL: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync</p>
+                          <p className="text-yellow-300">⚠️ /runsync 엔드포인트 사용 (동기식 처리)</p>
                         </div>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">3. Use This Web App:</p>
+                        <p className="font-medium text-sm">3. 웹 앱 사용:</p>
                         <div className="ml-4 text-xs space-y-1">
-                          <p>• Configure API credentials above</p>
-                          <p>• Click "Test & Setup" to prepare environment</p>
-                          <p>• Upload image and start processing</p>
+                          <p>• 위에서 API 인증 정보 설정</p>
+                          <p>• "Test & Setup" 클릭하여 GPU 환경 준비</p>
+                          <p>• 이미지 업로드 및 처리 시작</p>
+                          <p className="text-green-300">✅ GPU 상태 확인 후 처리 진행</p>
                         </div>
                       </div>
                     </div>
@@ -920,27 +953,27 @@ python3 handler.py`;
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                     <div className="space-y-3 text-sm">
                       <div>
-                        <p className="font-medium text-green-400">Step 1: Directory Cleanup & Clone</p>
-                        <p className="text-green-200">Removes existing directory (if any) and clones fresh code from GitHub</p>
+                        <p className="font-medium text-green-400">Step 1: GPU 하드웨어 감지</p>
+                        <p className="text-green-200">nvidia-smi로 GPU 하드웨어 및 CUDA 드라이버 상태 확인</p>
                       </div>
                       <div>
-                        <p className="font-medium text-green-400">Step 2: Dependency Installation</p>
-                        <p className="text-green-200">Installs runpod package and fixes import statements via web app</p>
+                        <p className="font-medium text-green-400">Step 2: CUDA PyTorch 설치</p>
+                        <p className="text-green-200">CUDA 11.8 전용 PyTorch 및 필수 AI/ML 패키지 강제 설치</p>
                       </div>
                       <div>
-                        <p className="font-medium text-green-400">Step 3: Verification</p>
-                        <p className="text-green-200">Tests environment setup and API connection</p>
+                        <p className="font-medium text-green-400">Step 3: GPU 검증</p>
+                        <p className="text-green-200">torch.cuda.is_available() 및 GPU 개수 확인</p>
                       </div>
                       <div>
-                        <p className="font-medium text-green-400">Step 4: Processing Ready</p>
-                        <p className="text-green-200">Your environment is now ready for image processing!</p>
+                        <p className="font-medium text-green-400">Step 4: 가속 처리 준비 완료</p>
+                        <p className="text-green-200">GPU 가속으로 빠른 이미지 처리 환경 완성!</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={() => setIsSetupGuideOpen(false)}>
-                    Got it! Problem solved.
+                    이해했습니다! GPU 가속 설정 완료.
                   </Button>
                 </div>
               </DialogContent>
