@@ -1296,14 +1296,14 @@ function App() {
                     <p className="text-destructive font-medium mb-1">Processing Failed</p>
                     <p className="text-muted-foreground">
                       Click "Clear Errors" or "Retry Processing" to try again
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
         </div>
 
+        {/* Control Buttons */}
+        <div className="flex justify-center gap-4">
+          <Button 
         {/* Control Buttons */}
         <div className="flex justify-center gap-4">
           <Button 
