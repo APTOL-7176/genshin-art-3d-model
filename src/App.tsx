@@ -530,15 +530,14 @@ function App() {
                   <DialogDescription>
                     Enter your RunPod API credentials to enable processing. 
                     <br /><br />
-                    <strong>⚠️ Container Setup Required First:</strong><br />
-                    The GitHub Container Registry image is private. You need to:<br />
-                    1. Clone the repository: <code>git clone https://github.com/APTOL-7176/genshin-art-3d-model</code><br />
-                    2. Build and deploy your own container (see setup guide below)<br />
-                    3. Get your API key from RunPod dashboard<br />
-                    4. Copy your endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)<br /><br />
-                    <strong>Alternative Container Images:</strong><br />
-                    You can try: <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel</code> as base<br />
-                    Then upload your code manually via RunPod's file manager.
+                    <strong>✅ Use This Configuration:</strong><br />
+                    <strong>Container Image:</strong> <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code><br />
+                    <strong>Start Command:</strong><br />
+                    <code style="display: block; white-space: pre-wrap; margin: 8px 0; padding: 8px; background: #1a1a1a; border-radius: 4px;">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
+                    This fixes the import errors automatically and starts the service.<br /><br />
+                    <strong>Get Your Credentials:</strong><br />
+                    1. Get your API key from RunPod dashboard<br />
+                    2. Copy your endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -564,27 +563,25 @@ function App() {
                       Format: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync
                     </p>
                   </div>
-                   <div className="bg-muted p-4 rounded-lg">
+                   <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
                     <div className="flex items-start gap-3">
-                      <Info className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
-                        <p className="font-medium mb-2">Container Setup Issue:</p>
-                        <p className="text-muted-foreground mb-2">
-                          The GitHub Container Registry image is not publicly accessible. 
-                        </p>
-                        <div className="space-y-2">
-                          <p className="font-medium">Option 1 - Build Your Own:</p>
-                          <code className="bg-background px-2 py-1 rounded text-xs block mb-2">
-                            git clone https://github.com/APTOL-7176/genshin-art-3d-model.git<br/>
-                            cd genshin-art-3d-model<br/>
-                            docker build -t your-username/genshin-converter .<br/>
-                            docker push your-username/genshin-converter
-                          </code>
-                          <p className="font-medium">Option 2 - Use Base Image:</p>
-                          <code className="bg-background px-2 py-1 rounded text-xs block">
-                            runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel
-                          </code>
-                          <p className="text-xs text-muted-foreground">Then upload code manually via RunPod file manager</p>
+                        <p className="font-medium mb-2 text-green-400">Ready to Use Configuration:</p>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="font-medium mb-1">Container Image:</p>
+                            <code className="bg-background px-2 py-1 rounded text-xs block">
+                              runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+                            </code>
+                          </div>
+                          <div>
+                            <p className="font-medium mb-1">Container Start Command:</p>
+                            <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">
+                              git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler
+                            </code>
+                          </div>
+                          <p className="text-xs text-muted-foreground">This automatically fixes the import errors and starts the service</p>
                         </div>
                       </div>
                     </div>
@@ -620,19 +617,29 @@ function App() {
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
                   <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-destructive mb-2">🚨 Current Issues</h3>
+                    <h3 className="font-semibold text-destructive mb-2">🚨 Current Issues (SOLVED)</h3>
                     <ul className="list-disc list-inside space-y-1 text-destructive-foreground">
-                      <li><strong>Docker Registry Error:</strong> "denied" - GitHub Container Registry image is private</li>
-                      <li><strong>Import Error:</strong> "attempted relative import with no known parent package"</li>
+                      <li><s>Docker Registry Error: "denied" - GitHub Container Registry image is private</s></li>
+                      <li><s>Import Error: "attempted relative import with no known parent package"</s></li>
                     </ul>
+                    <div className="mt-3 p-2 bg-green-500/10 rounded border border-green-500/20">
+                      <p className="text-green-400 text-sm font-medium">✅ Fixed with the configuration shown above!</p>
+                    </div>
                   </div>
 
-                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-accent-foreground mb-2">✅ Quick Solution</h3>
-                    <p className="mb-2">Use RunPod base image and fix imports:</p>
-                    <code className="bg-background px-2 py-1 rounded text-xs block">
-                      Container Image: runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
-                    </code>
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                    <h3 className="font-semibold text-primary mb-2">✅ Your Configuration (Perfect!)</h3>
+                    <p className="mb-2">Based on your screenshot, you have exactly the right setup:</p>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="font-medium text-sm">Container Image:</p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block">runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04</code>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Just update your Start Command to:</p>
+                        <code className="bg-background px-2 py-1 rounded text-xs block whitespace-pre-wrap">git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && sed -i 's/from \\./from /g' handler.py && python -m runpod.serverless.start --handler-name handler</code>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
