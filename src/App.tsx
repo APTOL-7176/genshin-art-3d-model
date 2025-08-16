@@ -25,7 +25,9 @@ import {
   Sword,
   Person,
   Wrench,
-  Info
+  Info,
+  Question,
+  Code
 } from '@phosphor-icons/react';
 
 interface ProcessingStep {
@@ -52,6 +54,7 @@ function App() {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [modelFiles, setModelFiles] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSetupGuideOpen, setIsSetupGuideOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [removeWeapon, setRemoveWeapon] = useKV("remove-weapon", true);
   const [enableRigging, setEnableRigging] = useKV("enable-rigging", true);
@@ -521,19 +524,21 @@ function App() {
                   Configure API
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
+              <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>RunPod API Configuration</DialogTitle>
                   <DialogDescription>
                     Enter your RunPod API credentials to enable processing. 
                     <br /><br />
-                    <strong>Setup Instructions:</strong><br />
-                    1. Deploy the RunPod serverless endpoint using: <code>ghcr.io/aptol-7176/genshin-art-3d-model:latest</code><br />
-                    2. Get your API key from RunPod dashboard<br />
-                    3. Copy the endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)<br /><br />
-                    <strong>Container Image:</strong><br />
-                    Use this in the RunPod "Container Image" field:<br />
-                    <code>ghcr.io/aptol-7176/genshin-art-3d-model:latest</code>
+                    <strong>⚠️ Container Setup Required First:</strong><br />
+                    The GitHub Container Registry image is private. You need to:<br />
+                    1. Clone the repository: <code>git clone https://github.com/APTOL-7176/genshin-art-3d-model</code><br />
+                    2. Build and deploy your own container (see setup guide below)<br />
+                    3. Get your API key from RunPod dashboard<br />
+                    4. Copy your endpoint URL (format: https://api.runpod.ai/v2/ENDPOINT_ID/runsync)<br /><br />
+                    <strong>Alternative Container Images:</strong><br />
+                    You can try: <code>runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel</code> as base<br />
+                    Then upload your code manually via RunPod's file manager.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -559,17 +564,28 @@ function App() {
                       Format: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync
                     </p>
                   </div>
-                  <div className="bg-muted p-4 rounded-lg">
+                   <div className="bg-muted p-4 rounded-lg">
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
-                        <p className="font-medium mb-2">Container Setup:</p>
+                        <p className="font-medium mb-2">Container Setup Issue:</p>
                         <p className="text-muted-foreground mb-2">
-                          If you see import errors, the container image field should contain:
+                          The GitHub Container Registry image is not publicly accessible. 
                         </p>
-                        <code className="bg-background px-2 py-1 rounded text-xs block">
-                          ghcr.io/aptol-7176/genshin-art-3d-model:latest
-                        </code>
+                        <div className="space-y-2">
+                          <p className="font-medium">Option 1 - Build Your Own:</p>
+                          <code className="bg-background px-2 py-1 rounded text-xs block mb-2">
+                            git clone https://github.com/APTOL-7176/genshin-art-3d-model.git<br/>
+                            cd genshin-art-3d-model<br/>
+                            docker build -t your-username/genshin-converter .<br/>
+                            docker push your-username/genshin-converter
+                          </code>
+                          <p className="font-medium">Option 2 - Use Base Image:</p>
+                          <code className="bg-background px-2 py-1 rounded text-xs block">
+                            runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel
+                          </code>
+                          <p className="text-xs text-muted-foreground">Then upload code manually via RunPod file manager</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -581,6 +597,106 @@ function App() {
                       Save
                     </Button>
                   </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={isSetupGuideOpen} onOpenChange={setIsSetupGuideOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" className="gap-2">
+                  <Question className="w-4 h-4" />
+                  Setup Guide
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Code className="w-5 h-5" />
+                    Complete Setup Guide - Fix Container & Import Errors
+                  </DialogTitle>
+                  <DialogDescription>
+                    Step-by-step guide to fix the GitHub Container Registry access and import errors
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 text-sm">
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                    <h3 className="font-semibold text-destructive mb-2">🚨 Current Issues</h3>
+                    <ul className="list-disc list-inside space-y-1 text-destructive-foreground">
+                      <li><strong>Docker Registry Error:</strong> "denied" - GitHub Container Registry image is private</li>
+                      <li><strong>Import Error:</strong> "attempted relative import with no known parent package"</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
+                    <h3 className="font-semibold text-accent-foreground mb-2">✅ Quick Solution</h3>
+                    <p className="mb-2">Use RunPod base image and fix imports:</p>
+                    <code className="bg-background px-2 py-1 rounded text-xs block">
+                      Container Image: runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+                    </code>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2">Step 1: Get the Source Code</h3>
+                    <code className="bg-muted px-3 py-2 rounded text-xs block">
+                      git clone https://github.com/APTOL-7176/genshin-art-3d-model.git<br/>
+                      cd genshin-art-3d-model
+                    </code>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2">Step 2: Fix Import Errors</h3>
+                    <p className="mb-2">Change all relative imports to absolute imports in <code>handler.py</code>:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-destructive font-medium mb-1">❌ WRONG:</p>
+                        <code className="bg-muted px-2 py-1 rounded text-xs block">
+                          from .instantmesh_runner import ...<br/>
+                          from .genshin_style_converter import ...
+                        </code>
+                      </div>
+                      <div>
+                        <p className="text-green-400 font-medium mb-1">✅ CORRECT:</p>
+                        <code className="bg-muted px-2 py-1 rounded text-xs block">
+                          from instantmesh_runner import ...<br/>
+                          from genshin_style_converter import ...
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2">Step 3: Deploy Options</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-medium mb-2">Option A: Build Custom Container</h4>
+                        <code className="bg-muted px-2 py-1 rounded text-xs block mb-2">
+                          docker build -t yourname/genshin-converter .<br/>
+                          docker push yourname/genshin-converter
+                        </code>
+                        <p className="text-xs text-muted-foreground">Then use your image in RunPod</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-medium mb-2">Option B: Use Base Image</h4>
+                        <code className="bg-muted px-2 py-1 rounded text-xs block mb-2">
+                          runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel
+                        </code>
+                        <p className="text-xs text-muted-foreground">Upload Python files via RunPod file manager</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                    <h3 className="font-semibold mb-2">🎯 Test Your Setup</h3>
+                    <p>Use the "Test Connection" button above. It should return:</p>
+                    <code className="bg-background px-2 py-1 rounded text-xs block mt-2">
+                      {"{"} "status": "success", "message": "RunPod handler is working correctly!" {"}"}
+                    </code>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={() => setIsSetupGuideOpen(false)}>
+                    Got it!
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
