@@ -632,7 +632,7 @@ function App() {
                   Setup Guide
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Info className="w-5 h-5" />
