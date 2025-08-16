@@ -455,6 +455,7 @@ function App() {
     }
   };
 
+  const copyCommandToClipboard = async () => {
     const command = `git clone https://github.com/APTOL-7176/genshin-art-3d-model.git && cd genshin-art-3d-model && pip install -r requirements.txt && python -c "import re; content=open('handler.py').read(); open('handler.py','w').write(re.sub(r'from \\.','from ',content))" && python -m runpod.serverless.start --handler-name handler`;
     
     try {
@@ -466,7 +467,6 @@ function App() {
     }
   };
 
-  const testApiConnection = async () => {
   const testApiConnection = async () => {
     if (!apiKey || !apiEndpoint) {
       toast.error('Please enter both API key and endpoint');
@@ -481,6 +481,7 @@ function App() {
         }
       };
 
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -608,11 +609,12 @@ function App() {
                     </div>
                   </div>
                    <div className="flex gap-2">
-                   <div className="flex gap-2">lex-1 gap-2">
                     <Button onClick={copyCommandToClipboard} variant="secondary" className="flex-1 gap-2">
                       <Copy className="w-4 h-4" />
                       Copy Fixed Command
                     </Button>
+                    <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
+                      <Zap className="w-4 h-4" />
                       Test Connection
                     </Button>
                     <Button onClick={() => setIsDialogOpen(false)} className="flex-1">
@@ -625,11 +627,11 @@ function App() {
             
             <Dialog open={isSetupGuideOpen} onOpenChange={setIsSetupGuideOpen}>
               <DialogTrigger asChild>
-              <DialogTrigger asChild>
                 <Button variant="ghost" className="gap-2">
                   <Question className="w-4 h-4" />
                   Setup Guide
                 </Button>
+              </DialogTrigger>
               <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
