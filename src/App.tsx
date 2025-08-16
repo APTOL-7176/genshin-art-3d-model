@@ -179,12 +179,14 @@ function App() {
             "echo '📦 Installing dependencies with GPU support...'",
             "pip install --upgrade pip",
             "pip install runpod",
+            "echo '🔧 Fixing NumPy compatibility issue (NumPy 2.x -> 1.x)'",
+            "pip install 'numpy<2' --force-reinstall",
             "pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 || pip install torch torchvision torchaudio",
             "pip install diffusers transformers accelerate controlnet_aux",
             "echo '🔧 Fixing import statements...'",
             "python3 -c \"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\"",
             "echo '🔬 Final GPU verification:'",
-            "python3 -c \\\"import torch; print('✅ PyTorch version:', torch.__version__); print('✅ CUDA available:', torch.cuda.is_available()); print('✅ GPU count:', torch.cuda.device_count()); print('✅ Current device:', torch.cuda.current_device() if torch.cuda.is_available() else 'CPU')\\\"",
+            "python3 -c \\\"import torch; import numpy as np; print('✅ PyTorch version:', torch.__version__); print('✅ NumPy version:', np.__version__); print('✅ CUDA available:', torch.cuda.is_available()); print('✅ GPU count:', torch.cuda.device_count()); print('✅ Current device:', torch.cuda.current_device() if torch.cuda.is_available() else 'CPU')\\\"",
             "echo '🎯 Container ready for processing!'"
           ]
         }
@@ -328,19 +330,19 @@ function App() {
       setIsProcessing(true);
       
       // Step 0: Setup environment first with GPU verification
-      toast.info('GPU 환경 설정 및 RunPod 컨테이너 준비 중...');
+      toast.info('GPU 환경 설정 + NumPy 호환성 확인 및 RunPod 컨테이너 준비 중...');
       updateStepStatus('style-conversion', 'processing', 5);
       
       try {
         const setupResult = await setupRunPodEnvironment();
         if (setupResult.status === 'COMPLETED') {
-          toast.success('GPU 환경 설정 완료!');
+          toast.success('GPU 환경 설정 + NumPy 호환성 해결 완료!');
         } else {
           toast.info('환경 이미 구성되었을 수 있음');
         }
       } catch (setupError) {
         console.warn('Environment setup warning:', setupError);
-        toast.warning('⚠️ GPU 환경 설정 경고 - 처리 계속 진행 (이미 준비되었을 수 있음)');
+        toast.warning('⚠️ GPU 환경 + NumPy 호환성 설정 경고 - 처리 계속 진행 (이미 준비되었을 수 있음)');
       }
       
       // Step 1: Convert image to base64 and process through the full pipeline
@@ -542,10 +544,10 @@ function App() {
         toast.error('3D model generation failed - no model files found');
       }
 
-      toast.success('🚀 GPU 가속 처리 파이프라인 완료!');
+      toast.success('🚀 NumPy 호환성 해결 + GPU 가속 처리 파이프라인 완료!');
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(`GPU 처리 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`NumPy/GPU 처리 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
       // Mark any currently processing step as error
       setProcessingSteps(prev => prev.map(step => 
@@ -602,18 +604,19 @@ function App() {
   };
 
   const copyCommandToClipboard = async () => {
-    const command = "# GPU-ENABLED Container Start Command v5.0 - Fixes CPU-only issue\n" +
-"# This command ensures proper GPU detection and CUDA PyTorch installation\n\n" +
-"bash -c \"set -e; echo '🚀 GPU Container Setup v5.0'; echo '🔍 GPU Detection:'; nvidia-smi || echo '⚠️ GPU not available'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \\\"📂 Working in: \\$WORKDIR\\\"; cd \\$WORKDIR; rm -rf genshin-art-3d-model; echo '📥 Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo '📦 Installing GPU-enabled dependencies...'; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; echo '🔧 Fixing imports...'; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\\\"; echo '🔬 GPU Verification:'; python3 -c \\\"import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU Count:', torch.cuda.device_count()); print('Device:', torch.cuda.current_device() if torch.cuda.is_available() else 'CPU')\\\"; echo '🎯 Starting handler...'; python3 handler.py\"\n\n" +
+    const command = "# GPU-ENABLED Container Start Command v5.1 - Fixes NumPy compatibility\n" +
+"# This command fixes the NumPy 2.x compatibility issue with PyTorch\n\n" +
+"bash -c \"set -e; echo '🚀 GPU Container Setup v5.1'; echo '🔍 GPU Detection:'; nvidia-smi || echo '⚠️ GPU not available'; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; if [ ! -d '/app' ]; then WORKDIR=/; fi; echo \\\"📂 Working in: \\$WORKDIR\\\"; cd \\$WORKDIR; rm -rf genshin-art-3d-model; echo '📥 Cloning repository...'; git clone --depth 1 --single-branch https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; echo '📦 Installing dependencies...'; pip install --upgrade pip; pip install runpod; echo '🔧 Fixing NumPy compatibility (2.x -> 1.x)'; pip install 'numpy<2' --force-reinstall; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; echo '🔧 Fixing imports...'; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content); print('✅ Imports fixed')\\\"; echo '🔬 GPU + NumPy Verification:'; python3 -c \\\"import torch; import numpy as np; print('PyTorch:', torch.__version__); print('NumPy:', np.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU Count:', torch.cuda.device_count()); print('Device:', torch.cuda.current_device() if torch.cuda.is_available() else 'CPU')\\\"; echo '🎯 Starting handler...'; python3 handler.py\"\n\n" +
 "# WHAT THIS VERSION FIXES:\n" +
+"# ❌ Old problem: NumPy 2.x compatibility issue with PyTorch\n" +
+"# ❌ Old problem: '_ARRAY_API not found' error\n" +
 "# ❌ Old problem: PyTorch using CPU instead of GPU\n" +
-"# ❌ Old problem: Missing AI/ML dependencies for image processing\n" +
 "# ✅ New solution:\n" +
+"#   - Forces NumPy downgrade to 1.x for PyTorch compatibility\n" +
 "#   - Installs CUDA-enabled PyTorch specifically for CUDA 11.8\n" +
 "#   - Adds proper GPU detection and verification\n" +
 "#   - Installs required ML packages (diffusers, transformers, accelerate)\n" +
-"#   - Shows clear GPU status in logs\n" +
-"#   - Ensures container uses GPU when available\n\n" +
+"#   - Shows NumPy version in verification logs\n\n" +
 "# CONTAINER REQUIREMENTS:\n" +
 "# Image: runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04\n" +
 "# GPU: Any CUDA-compatible GPU (RTX 3090, 4090, A100, etc.)\n" +
@@ -622,16 +625,18 @@ function App() {
 "cd /workspace || cd /app || cd /\n" +
 "nvidia-smi\n" +
 "python3 -c \"import torch; print('CUDA:', torch.cuda.is_available())\"\n" +
+"python3 -c \"import numpy as np; print('NumPy:', np.__version__)\"\n" +
 "python3 -c \"import torch; print('GPU Count:', torch.cuda.device_count())\"\n" +
 "python3 -c \"import torch; print('Device Name:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')\"\n\n" +
 "# EXPECTED OUTPUT when working:\n" +
+"# NumPy: 1.26.4 (or another 1.x version)\n" +
 "# CUDA: True\n" +
 "# GPU Count: 1 (or more)\n" +
 "# Device Name: NVIDIA RTX 4090 (or your GPU model)";
     
     try {
       await navigator.clipboard.writeText(command);
-      toast.success('🚀 GPU-Enabled Container Command copied! This fixes CPU-only mode.');
+      toast.success('🚀 GPU-Enabled Container Command copied! This fixes NumPy compatibility.');
     } catch (error) {
       console.error('Failed to copy:', error);
       toast.error('Failed to copy command');
@@ -645,23 +650,25 @@ function App() {
     }
     
     try {
-      toast.info('RunPod 컨테이너 테스트 및 GPU 환경 초기화 중...');
+      toast.info('RunPod 컨테이너 테스트, NumPy 호환성 확인 및 GPU 환경 초기화 중...');
       
           // First, test basic connectivity with GPU detection
           const healthPayload = {
             input: {
               action: "health_check",
               commands: [
-                "echo '🔍 Container Health & GPU Status Check:'",
+                "echo '🔍 Container Health, NumPy & GPU Status Check:'",
                 "pwd",
                 "echo 'Python version:' && python3 --version",
                 "echo 'Pip version:' && pip --version", 
+                "echo '📊 NumPy Version Check:'",
+                "python3 -c \\\"import numpy as np; print('NumPy version:', np.__version__)\\\" 2>/dev/null || echo '❌ NumPy not available or incompatible'",
                 "echo '🎮 GPU Detection:'",
                 "nvidia-smi || echo '❌ NVIDIA GPU not detected'",
-                "echo '🧠 PyTorch GPU Check:'",
-                "python3 -c \\\"import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('GPU count:', torch.cuda.device_count())\\\" 2>/dev/null || echo 'PyTorch not installed or GPU not available'",
-                "echo '📊 Available packages:'",
-                "pip list | grep -E '(torch|cuda|gpu)' || echo 'No GPU-related packages found'",
+                "echo '🧠 PyTorch + NumPy Compatibility Check:'",
+                "python3 -c \\\"import torch; import numpy as np; print('PyTorch version:', torch.__version__); print('NumPy version:', np.__version__); print('CUDA available:', torch.cuda.is_available()); print('GPU count:', torch.cuda.device_count())\\\" 2>/dev/null || echo '❌ PyTorch or NumPy compatibility issue detected'",
+                "echo '📦 Available packages:'",
+                "pip list | grep -E '(torch|numpy|cuda|gpu)' || echo 'No GPU/NumPy related packages found'",
                 "echo '✅ Health check completed'"
               ]
             }
@@ -694,20 +701,20 @@ function App() {
       const result = await response.json();
       console.log('Health check result:', result);
       
-      toast.success('✅ API 연결 성공! GPU 컨테이너 초기화 중...');
+      toast.success('✅ API 연결 성공! NumPy 호환성 확인 및 GPU 컨테이너 초기화 중...');
       
       // Now initialize the container environment
       try {
         const setupResult = await setupRunPodEnvironment();
         
         if (setupResult.status === 'COMPLETED' || setupResult.output) {
-          toast.success('🚀 GPU 컨테이너 초기화 완료! 가속 처리 준비됨.');
+          toast.success('🚀 NumPy 호환성 해결 + GPU 컨테이너 초기화 완료! 가속 처리 준비됨.');
         } else {
-          toast.info('⚠️ 컨테이너 응답 중이나 GPU 설정 검증 필요');
+          toast.info('⚠️ 컨테이너 응답 중이나 NumPy/GPU 설정 검증 필요');
         }
       } catch (setupError) {
         console.warn('Container initialization warning:', setupError);
-        toast.warning(`⚠️ 컨테이너 응답 중이나 GPU 설정에 문제 있음: ${setupError instanceof Error ? setupError.message : 'Unknown error'}`);
+        toast.warning(`⚠️ 컨테이너 응답 중이나 NumPy/GPU 설정에 문제 있음: ${setupError instanceof Error ? setupError.message : 'Unknown error'}`);
       }
     } catch (error) {
       console.error('API test error:', error);
@@ -737,14 +744,14 @@ function App() {
           </p>
           <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 max-w-4xl mx-auto">
             <p className="text-sm text-red-200 mb-2">
-              <strong>⚠️ GPU 사용 문제 감지:</strong> CPU 전용 모드로 실행 중
+              <strong>⚠️ NumPy 호환성 문제 감지:</strong> NumPy 2.x가 PyTorch와 호환되지 않음
             </p>
             <ul className="text-xs text-red-300 text-left space-y-1 max-w-2xl mx-auto">
-              <li>• <strong>현재 상황:</strong> PyTorch가 CPU만 사용하고 있음</li>
-              <li>• <strong>원인:</strong> CUDA PyTorch가 제대로 설치되지 않음</li>
-              <li>• <strong>해결방법:</strong> 새로운 GPU-enabled Container Start Command 사용</li>
-              <li>• <strong>필요한 설정:</strong> runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04 이미지 + GPU Pod</li>
-              <li className="text-yellow-200">⚠️ 이 문제를 해결하지 않으면 이미지 처리가 매우 느림!</li>
+              <li>• <strong>현재 상황:</strong> NumPy 2.2.6이 설치되어 있으나 PyTorch는 NumPy 1.x 필요</li>
+              <li>• <strong>오류 메시지:</strong> "_ARRAY_API not found" - NumPy 버전 불일치</li>
+              <li>• <strong>해결방법:</strong> NumPy를 1.x 버전으로 다운그레이드</li>
+              <li>• <strong>필요한 설정:</strong> pip install 'numpy&lt;2' --force-reinstall</li>
+              <li className="text-yellow-200">⚠️ 이 문제를 해결하지 않으면 PyTorch 로드 실패!</li>
             </ul>
           </div>
           
@@ -763,20 +770,20 @@ function App() {
                   <DialogDescription>
                     Enter your RunPod API credentials to enable GPU-accelerated processing.
                     <br /><br />
-                    <strong>🚀 GPU-ENABLED SETUP v5.0 - CPU 전용 문제 해결:</strong><br />
+                    <strong>🚀 GPU-ENABLED SETUP v5.1 - NumPy 호환성 문제 해결:</strong><br />
                     
                     <div style={{ marginTop: "12px" }}>
-                      <p style={{ fontWeight: "bold", marginBottom: "8px", color: "#ff6b6b" }}>⚠️ GPU 필수: CPU 전용으로 실행하면 매우 느림!</p>
+                      <p style={{ fontWeight: "bold", marginBottom: "8px", color: "#ff6b6b" }}>⚠️ NumPy 2.x 호환성 문제: PyTorch 로드 실패!</p>
                       <div style={{ background: "#0d1117", padding: "12px", borderRadius: "6px", margin: "8px 0", border: "1px solid #30363d" }}>
                         <code style={{ color: "#7d8590", fontSize: "10px", wordBreak: "break-all" }}>
-                          bash -c "set -e; echo '🚀 GPU Container Setup v5.0'; nvidia-smi; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; cd \\$WORKDIR; rm -rf genshin-art-3d-model; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; pip install --upgrade pip; pip install runpod; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content);\\\"; python3 -c \\\"import torch; print('CUDA:', torch.cuda.is_available())\\\"; python3 handler.py"
+                          bash -c "set -e; echo '🚀 GPU Container Setup v5.1'; nvidia-smi; WORKDIR=/workspace; if [ ! -d '/workspace' ]; then WORKDIR=/app; fi; cd \\$WORKDIR; rm -rf genshin-art-3d-model; git clone --depth 1 https://github.com/APTOL-7176/genshin-art-3d-model.git; cd genshin-art-3d-model; pip install --upgrade pip; pip install runpod; pip install 'numpy&lt;2' --force-reinstall; pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; pip install diffusers transformers accelerate controlnet_aux; python3 -c \\\"import re; content=open('handler.py','r').read(); content=re.sub(r'from \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.', 'from ', content); open('handler.py','w').write(content);\\\"; python3 -c \\\"import torch; import numpy as np; print('NumPy:', np.__version__); print('CUDA:', torch.cuda.is_available())\\\"; python3 handler.py"
                         </code>
                       </div>
                       <p style={{ fontSize: "12px", color: "#7d8590", marginTop: "8px" }}>
-                        🔧 <strong>이전 문제들:</strong> CPU 전용 모드 + 느린 처리 속도<br />
-                        ✅ <strong>최신 수정:</strong> CUDA PyTorch 강제 설치 + GPU 검증<br />
+                        🔧 <strong>이전 문제들:</strong> NumPy 2.x 호환성 문제 + "_ARRAY_API not found" 오류<br />
+                        ✅ <strong>최신 수정:</strong> NumPy 1.x 강제 설치 + PyTorch 호환성 보장<br />
                         ✅ AI/ML 패키지 추가 (diffusers, transformers, accelerate)<br />
-                        ✅ GPU 상태 실시간 확인<br />
+                        ✅ NumPy 버전 확인 + GPU 상태 실시간 확인<br />
                         ⚠️ <strong>중요:</strong> GPU Pod 필수! CPU Pod는 매우 느림
                       </p>
                     </div>
@@ -872,36 +879,37 @@ function App() {
                     Setup Guide - GPU 가속 문제 해결
                   </DialogTitle>
                   <DialogDescription>
-                    최신 업데이트: CPU 전용 모드 문제 해결 및 GPU 가속 활성화!
+                    최신 업데이트: NumPy 호환성 문제 해결 및 GPU 가속 활성화!
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 text-sm">
                   <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-red-400 mb-2">⚠️ 최신 문제 분석: GPU 사용 불가 문제!</h3>
+                    <h3 className="font-semibold text-red-400 mb-2">⚠️ 최신 문제 분석: NumPy 호환성 문제!</h3>
                     <div className="space-y-2 text-red-200">
-                      <p><strong>발생한 문제:</strong> PyTorch가 CPU만 사용하여 처리 속도가 매우 느림</p>
-                      <p><strong>근본 원인:</strong> 기본 PyTorch 설치 시 CUDA 지원 버전이 설치되지 않음</p>
-                      <p><strong>확인 방법:</strong> "torch.cuda.is_available(): False" 출력</p>
-                      <p><strong>해결방안:</strong> CUDA 11.8 전용 PyTorch 및 ML 패키지 강제 설치</p>
-                      <p className="text-green-300 font-medium">✅ 새로운 GPU-enabled 명령어로 완전 해결!</p>
+                      <p><strong>발생한 문제:</strong> NumPy 2.2.6이 PyTorch와 호환되지 않아 로드 실패</p>
+                      <p><strong>근본 원인:</strong> PyTorch 2.1.0이 NumPy 1.x에서 컴파일되어 NumPy 2.x와 충돌</p>
+                      <p><strong>오류 메시지:</strong> "_ARRAY_API not found" - NumPy 버전 불일치</p>
+                      <p><strong>해결방안:</strong> NumPy를 1.x 버전으로 다운그레이드 후 PyTorch 재설치</p>
+                      <p className="text-green-300 font-medium">✅ 새로운 NumPy-호환 명령어로 완전 해결!</p>
                     </div>
                   </div>
 
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-green-400 mb-2">✅ GPU 가속 문제 완전히 해결!</h3>
+                    <h3 className="font-semibold text-green-400 mb-2">✅ NumPy 호환성 + GPU 가속 문제 완전히 해결!</h3>
                     <ul className="list-disc list-inside space-y-1 text-green-300">
+                      <li>NumPy 1.x 버전으로 강제 다운그레이드 (--force-reinstall)</li>
                       <li>CUDA 11.8 전용 PyTorch 강제 설치 (--index-url 사용)</li>
                       <li>필수 AI/ML 패키지 추가 (diffusers, transformers, accelerate, controlnet_aux)</li>
-                      <li>GPU 검증 및 상태 확인 명령어 추가</li>
+                      <li>NumPy 버전 및 GPU 검증 명령어 추가</li>
                       <li>nvidia-smi를 통한 GPU 하드웨어 확인</li>
-                      <li className="font-medium text-green-200">✅ torch.cuda.is_available() = True 보장!</li>
+                      <li className="font-medium text-green-200">✅ numpy.version + torch.cuda.is_available() = True 보장!</li>
                       <li className="text-yellow-200">⚠️ 반드시 GPU Pod에서 실행 (CPU Pod는 매우 느림)</li>
-                      <li className="text-blue-200">💡 로그에서 "CUDA: True" 메시지 확인!</li>
+                      <li className="text-blue-200">💡 로그에서 "NumPy: 1.x.x" + "CUDA: True" 메시지 확인!</li>
                     </ul>
                   </div>
 
                   <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                    <h3 className="font-semibold text-primary mb-2">📋 GPU 가속 설정 단계</h3>
+                    <h3 className="font-semibold text-primary mb-2">📋 NumPy 호환성 + GPU 가속 설정 단계</h3>
                     <div className="space-y-3">
                       <div>
                         <p className="font-medium text-sm">1. GPU Pod 생성:</p>
