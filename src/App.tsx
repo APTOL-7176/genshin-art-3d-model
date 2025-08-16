@@ -240,18 +240,12 @@ function App() {
             "        }",
             "",
             "if __name__ == '__main__':",
-            "    print('🚀 BULLETPROOF v12.0 Handler 서버 시작...')",
             "    try:",
-            "        print('RunPod 서버리스 시작 중...')",
             "        runpod.serverless.start({'handler': handler})",
-            "        print('✅ RunPod 서버리스 시작 성공!')",
             "    except Exception as e:",
-            "        print(f'❌ 서버리스 시작 실패: {e}')",
             "        import traceback",
             "        traceback.print_exc()",
-            "        sys.exit(1)",
             "HANDLER_END",
-            "echo '✅ BULLETPROOF Handler 생성 완료'",
             "echo '🧪 Handler 임포트 테스트:'",
             "python3 -c 'import bulletproof_handler; print(\"✅ BULLETPROOF Handler 임포트 성공\")' || exit 1",
             "echo '🚀 BULLETPROOF Handler 시작 (백그라운드):'",
@@ -259,14 +253,12 @@ function App() {
             "echo \"🎯 Handler PID: $HANDLER_PID\"",
             "echo '⏳ 5초 대기 중...'",
             "sleep 5",
-            "echo '🔍 Handler 상태 확인:'",
             "if kill -0 $HANDLER_PID 2>/dev/null; then",
-            "  echo \"✅ BULLETPROOF v12.0 Handler 완전 활성화! (PID: $HANDLER_PID)\"",
             "  echo '📊 Handler 로그 미리보기:'",
             "  head -20 bulletproof.log 2>/dev/null || echo 'Handler 실행 중...'",
             "  echo '🎯 BULLETPROOF v12.0 성공: Handler 안정적으로 실행 중!'",
             "else",
-            "  echo \"❌ Handler 프로세스 중단됨\"",
+            "  echo '❌ Handler 프로세스 중단됨'",
             "  echo '📋 전체 로그:'",
             "  cat bulletproof.log 2>/dev/null || echo 'No logs'",
             "  exit 1",
@@ -274,7 +266,6 @@ function App() {
             "echo '🛡️ BULLETPROOF v12.0 최종 성공: Handler 완전 준비!'",
             "tail -f /dev/null"
           ]
-        }
       };
 
       const response = await fetch(apiEndpoint, {
