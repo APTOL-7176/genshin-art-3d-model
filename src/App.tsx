@@ -45,6 +45,7 @@ function App() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
     {
       id: 'style-conversion',
@@ -114,7 +115,70 @@ function App() {
     ));
   };
 
-  const simulateProcessing = async () => {
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix to get pure base64
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const callRunPodAPI = async (payload: any) => {
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  };
+
+  const waitForJobCompletion = async (jobId: string, maxAttempts = 60): Promise<any> => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const statusResponse = await fetch(`${apiEndpoint}/status/${jobId}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error(`Status check failed: ${statusResponse.status}`);
+      }
+
+      const status = await statusResponse.json();
+      
+      if (status.status === 'COMPLETED') {
+        return status;
+      } else if (status.status === 'FAILED') {
+        throw new Error(`Job failed: ${status.error || 'Unknown error'}`);
+      }
+      
+      // Wait 5 seconds before next check
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    throw new Error('Job timed out after maximum attempts');
+  };
+
+  const validateApiEndpoint = (endpoint: string): boolean => {
+    const runpodPattern = /^https:\/\/api\.runpod\.ai\/v2\/[a-zA-Z0-9-]+\/(run|runsync)$/;
+    return runpodPattern.test(endpoint);
+  };
+
+  const processImage = async () => {
     if (!uploadedImage) {
       toast.error('Please upload an image first');
       return;
@@ -125,68 +189,188 @@ function App() {
       return;
     }
 
+    if (!validateApiEndpoint(apiEndpoint)) {
+      toast.error('Invalid API endpoint format. Please use: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync');
+      return;
+    }
+
     try {
-      // Style Conversion
+      setIsProcessing(true);
+      
+      // Step 1: Style Conversion to Genshin Impact style
       updateStepStatus('style-conversion', 'processing', 0);
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        updateStepStatus('style-conversion', 'processing', i);
+      
+      const imageBase64 = await convertImageToBase64(uploadedImage);
+      
+      const styleConversionPayload = {
+        input: {
+          image_url: `data:image/${uploadedImage.type.split('/')[1]};base64,${imageBase64}`,
+          score_threshold: 0.20,
+          mask_dilate: 12,
+          tpose_scope: "upper_body",
+          guidance_scale: 7.5,
+          steps: 34,
+          controlnet_scales: [1.35, 0.5],
+          out_long_side: 1024,
+          pixel_preserve: false,
+          prompt: "Genshin Impact style, anime cel shading, smooth soft gradients, clean thin lineart, high quality, detailed face, no weapons, natural relaxed hands, strict T-pose, character centered, soft vibrant colors, white studio lighting",
+          negative_prompt: "weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic"
+        }
+      };
+
+      updateStepStatus('style-conversion', 'processing', 25);
+      const styleResult = await callRunPodAPI(styleConversionPayload);
+      
+      updateStepStatus('style-conversion', 'processing', 50);
+      const styleJobResult = await waitForJobCompletion(styleResult.id);
+      
+      updateStepStatus('style-conversion', 'processing', 90);
+      
+      // Extract the processed image URL from result
+      const processedImageUrl = styleJobResult.output?.processed_image_url || styleJobResult.output?.image_url;
+      
+      if (!processedImageUrl) {
+        throw new Error('No processed image received from style conversion');
       }
+
       updateStepStatus('style-conversion', 'completed');
       
-      // Add generated Genshin-style image (simulated)
+      // Add generated Genshin-style image
       setGeneratedImages(prev => [...prev, {
         id: 'genshin-style',
         type: 'genshin',
-        url: uploadedImageUrl, // In real app, this would be the processed image
+        url: processedImageUrl,
         filename: 'genshin_style.png'
       }]);
 
-      // T-Pose Conversion
-      updateStepStatus('pose-conversion', 'processing', 0);
-      for (let i = 0; i <= 100; i += 20) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        updateStepStatus('pose-conversion', 'processing', i);
-      }
+      // Step 2: T-Pose Conversion (already included in the style conversion)
       updateStepStatus('pose-conversion', 'completed');
 
-      // Multi-View Generation
+      // Step 3: Multi-View Generation
       updateStepStatus('multi-view', 'processing', 0);
-      for (let i = 0; i <= 100; i += 25) {
-        await new Promise(resolve => setTimeout(resolve, 400));
-        updateStepStatus('multi-view', 'processing', i);
+      
+      // Generate front, side, and back views using the processed image
+      const viewPrompts = {
+        front: "front view, facing camera, full body, T-pose, centered",
+        side: "side view, profile, full body, T-pose, arms extended horizontally", 
+        back: "back view, rear view, full body, T-pose, arms extended horizontally"
+      };
+
+      const viewResults = [];
+      let viewProgress = 0;
+      
+      for (const [viewType, viewPrompt] of Object.entries(viewPrompts)) {
+        const viewPayload = {
+          input: {
+            image_url: processedImageUrl,
+            prompt: `${styleConversionPayload.input.prompt}, ${viewPrompt}`,
+            negative_prompt: styleConversionPayload.input.negative_prompt,
+            guidance_scale: 7.5,
+            steps: 30,
+            controlnet_scales: [1.2, 0.4]
+          }
+        };
+
+        const viewResult = await callRunPodAPI(viewPayload);
+        const viewJobResult = await waitForJobCompletion(viewResult.id);
+        
+        const viewImageUrl = viewJobResult.output?.processed_image_url || viewJobResult.output?.image_url;
+        
+        if (viewImageUrl) {
+          viewResults.push({
+            id: `${viewType}-view`,
+            type: viewType as 'front' | 'side' | 'back',
+            url: viewImageUrl,
+            filename: `${viewType}_view.png`
+          });
+        }
+
+        viewProgress += 33.33;
+        updateStepStatus('multi-view', 'processing', Math.min(100, viewProgress));
       }
+      
       updateStepStatus('multi-view', 'completed');
       
-      // Add multi-view images (simulated)
-      const views = ['front', 'side', 'back'] as const;
-      views.forEach(view => {
-        setGeneratedImages(prev => [...prev, {
-          id: `${view}-view`,
-          type: view,
-          url: uploadedImageUrl,
-          filename: `${view}_view.png`
-        }]);
-      });
+      // Add multi-view images
+      setGeneratedImages(prev => [...prev, ...viewResults]);
 
-      // 3D Model Creation
+      // Step 4: 3D Model Creation
       updateStepStatus('3d-model', 'processing', 0);
-      for (let i = 0; i <= 100; i += 15) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        updateStepStatus('3d-model', 'processing', i);
-      }
-      updateStepStatus('3d-model', 'completed');
+      
+      const meshPayload = {
+        input: {
+          final_png: processedImageUrl,
+          config: "configs/instant-mesh-large.yaml",
+          device: "cuda"
+        }
+      };
 
-      toast.success('Processing completed successfully!');
+      updateStepStatus('3d-model', 'processing', 25);
+      const meshResult = await callRunPodAPI(meshPayload);
+      
+      updateStepStatus('3d-model', 'processing', 50);
+      const meshJobResult = await waitForJobCompletion(meshResult.id);
+      
+      updateStepStatus('3d-model', 'processing', 90);
+      
+      // Check if 3D model was created successfully
+      if (meshJobResult.output?.out_dir_listing?.some((file: string) => file.endsWith('.obj') || file.endsWith('.fbx'))) {
+        updateStepStatus('3d-model', 'completed');
+        toast.success('3D model generation completed successfully!');
+      } else {
+        updateStepStatus('3d-model', 'error');
+        toast.error('3D model generation failed');
+      }
+
+      toast.success('All processing completed successfully!');
     } catch (error) {
-      toast.error('Processing failed. Please try again.');
       console.error('Processing error:', error);
+      toast.error(`Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Mark any currently processing step as error
+      setProcessingSteps(prev => prev.map(step => 
+        step.status === 'processing' ? { ...step, status: 'error' } : step
+      ));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const downloadImage = async (imageUrl: string, filename: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${filename}`);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Download failed');
     }
   };
 
   const resetProcessing = () => {
     setProcessingSteps(prev => prev.map(step => ({ ...step, status: 'pending', progress: undefined })));
     setGeneratedImages([]);
+    setIsProcessing(false);
+  };
+
+  const download3DModel = async () => {
+    try {
+      // In a real implementation, this would get the 3D model file from the last processing result
+      toast.info('3D model download would be implemented here with the actual model file from RunPod');
+    } catch (error) {
+      console.error('3D model download error:', error);
+      toast.error('3D model download failed');
+    }
   };
 
   const testApiConnection = async () => {
@@ -195,8 +379,38 @@ function App() {
       return;
     }
     
-    // Simulate API connection test
-    toast.success('API connection successful!');
+    try {
+      // Test API connection with a simple debug request
+      const testPayload = {
+        input: {
+          debug_help: true
+        }
+      };
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.ok) {
+        toast.success('API connection successful!');
+      } else {
+        toast.error('API connection failed - check your credentials');
+      }
+    } catch (error) {
+      console.error('API test error:', error);
+      toast.error(`API connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const getStepIcon = (step: ProcessingStep) => {
@@ -221,51 +435,71 @@ function App() {
           </p>
           
           {/* API Configuration */}
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Settings className="w-4 h-4" />
-                Configure API
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>RunPod API Configuration</DialogTitle>
-                <DialogDescription>
-                  Enter your RunPod API credentials to enable processing
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">API Key</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder="Enter your RunPod API key"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                  />
+          <div className="flex items-center gap-4">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Settings className="w-4 h-4" />
+                  Configure API
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>RunPod API Configuration</DialogTitle>
+                  <DialogDescription>
+                    Enter your RunPod API credentials to enable processing
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="api-key">API Key</Label>
+                    <Input
+                      id="api-key"
+                      type="password"
+                      placeholder="Enter your RunPod API key"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="api-endpoint">API Endpoint</Label>
+                    <Input
+                      id="api-endpoint"
+                      placeholder="https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync"
+                      value={apiEndpoint}
+                      onChange={(e) => setApiEndpoint(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Format: https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={testApiConnection} variant="outline" className="flex-1">
+                      Test Connection
+                    </Button>
+                    <Button onClick={() => setIsDialogOpen(false)} className="flex-1">
+                      Save
+                    </Button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="api-endpoint">API Endpoint</Label>
-                  <Input
-                    id="api-endpoint"
-                    placeholder="https://api.runpod.ai/v2/..."
-                    value={apiEndpoint}
-                    onChange={(e) => setApiEndpoint(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={testApiConnection} variant="outline" className="flex-1">
-                    Test Connection
-                  </Button>
-                  <Button onClick={() => setIsDialogOpen(false)} className="flex-1">
-                    Save
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+            
+            {/* API Status Indicator */}
+            <div className="flex items-center gap-2">
+              {apiKey && apiEndpoint && validateApiEndpoint(apiEndpoint) ? (
+                <>
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span className="text-sm text-green-400">API Configured</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-5 h-5 text-yellow-400" />
+                  <span className="text-sm text-yellow-400">API Not Configured</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Upload Section */}
@@ -348,19 +582,20 @@ function App() {
         {/* Control Buttons */}
         <div className="flex justify-center gap-4">
           <Button 
-            onClick={simulateProcessing} 
-            disabled={!uploadedImage || !apiKey || !apiEndpoint}
+            onClick={processImage} 
+            disabled={!uploadedImage || !apiKey || !apiEndpoint || isProcessing}
             size="lg"
             className="gap-2"
           >
             <Zap className="w-5 h-5" />
-            Start Processing
+            {isProcessing ? 'Processing...' : 'Start Processing'}
           </Button>
           <Button 
             onClick={resetProcessing} 
             variant="outline"
             size="lg"
             className="gap-2"
+            disabled={isProcessing}
           >
             Reset
           </Button>
@@ -401,7 +636,16 @@ function App() {
                             <Eye className="w-4 h-4" />
                             Preview
                           </Button>
-                          <Button size="sm" className="gap-2">
+                          <Button 
+                            size="sm" 
+                            className="gap-2"
+                            onClick={() => {
+                              const image = generatedImages.find(img => img.type === viewType);
+                              if (image) {
+                                downloadImage(image.url, image.filename);
+                              }
+                            }}
+                          >
                             <Download className="w-4 h-4" />
                             Download
                           </Button>
@@ -434,7 +678,7 @@ function App() {
             </CardHeader>
             <CardContent>
               <div className="flex justify-center">
-                <Button size="lg" className="gap-2">
+                <Button size="lg" className="gap-2" onClick={download3DModel}>
                   <Download className="w-5 h-5" />
                   Download 3D Model (.fbx)
                 </Button>
