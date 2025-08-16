@@ -627,14 +627,15 @@ function App() {
             
             <Dialog open={isSetupGuideOpen} onOpenChange={setIsSetupGuideOpen}>
               <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
                   <Question className="w-4 h-4" />
-                  <Question className="w-4 h-4" />
+                  Setup Guide
                 </Button>
               </DialogTrigger>
-              </DialogTrigger>
+              <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                  <DialogTitle className="flex items-center gap-2">
+                    <Info className="w-5 h-5" />
                     Complete Setup Guide - Fix Container & Import Errors
                   </DialogTitle>
                   <DialogDescription>
