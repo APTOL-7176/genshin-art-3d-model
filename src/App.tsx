@@ -1127,7 +1127,7 @@ function App() {
             "sleep 5",
             "echo '🔍 Handler 상태 상세 확인:'",
             "if kill -0 $HANDLER_PID 2>/dev/null; then",
-            "  echo '✅ BULLETPROOF v12.0 Handler 완전 활성화! (PID: '$HANDLER_PID')'",
+            "  echo '✅ BULLETPROOF v12.0 Handler 완전 활성화! (PID: '\"$HANDLER_PID\"')'",
             "  echo '📊 Handler 실시간 로그:'",
             "  tail -30 bulletproof.log 2>/dev/null || echo '로그 로딩 중...'",
             "  echo '🎯 BULLETPROOF v12.0 성공: Handler 안정적으로 실행 중!'",
