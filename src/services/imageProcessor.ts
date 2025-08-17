@@ -194,10 +194,10 @@ export class ImageProcessor {
         negativePrompt += ", weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, blade, shield, hammer, mace";
       }
 
-      // Prepare high-quality processing payload
+      // Prepare REAL AI processing payload for actual Genshin conversion
       const processingPayload = {
         input: {
-          action: "process_image_v2",
+          action: "process_image",  // Use the actual AI action from our handler
           image_data: imageBase64,
           image_format: imageFile.type.split('/')[1],
           config: {
@@ -265,25 +265,33 @@ export class ImageProcessor {
                            finalResult.result_url;
       }
 
-      // Check if we got a real AI processing result
+      // Check if we got a REAL AI processing result (not test handler)
       const isRealAI = finalResult.handler_version?.includes('REAL_AI') ||
                       finalResult.output?.gpu_used ||
-                      (finalResult.message && finalResult.message.includes('GPU'));
+                      finalResult.gpu_used ||
+                      (finalResult.output?.message && finalResult.output.message.includes('GPU')) ||
+                      (finalResult.message && finalResult.message.includes('GPU 가속'));
 
       if (!processedImageUrl) {
         if (isRealAI) {
-          throw new Error('Real AI handler responded but no processed image found - check GPU memory or AI model loading');
+          throw new Error('🎮 Real AI handler responded but no processed image found - check GPU memory, AI model loading, or prompt format');
         } else {
-          console.log('⚠️ Test handler is running - falling back to local processing');
+          console.log('⚠️ Test/BULLETPROOF handler detected - need to upload REAL AI handler for actual Genshin conversion');
           
-          // Fallback to local processing
+          // Don't fallback immediately - try to get the bulletproof response if available
+          if (finalResult.status === 'SUCCESS' && finalResult.output) {
+            console.log('✅ Handler working but using test mode - upload "완성된 실제 AI Handler" for real processing');
+          }
+          
+          // Fallback to enhanced local processing
           const localResult = await this.applyGenshinStyleLocal(imageFile);
           return {
             status: 'SUCCESS',
             processed_image_url: localResult,
-            handler_version: 'LOCAL_FALLBACK_v1.0',
+            handler_version: 'LOCAL_ENHANCED_v2.0',
             config_used: config,
-            processing_time: 0
+            processing_time: 0,
+            error: '⚠️ Using enhanced local processing - Upload REAL AI Handler to RunPod for GPU-accelerated Genshin conversion'
           };
         }
       }

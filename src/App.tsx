@@ -941,15 +941,23 @@ function App() {
         throw new Error('No processed image returned from service');
       }
       
-      // Check if we got real AI processing
+      // Check if we got real AI processing  
       const isRealAI = imageResult.handler_version?.includes('REAL_AI') || 
                       imageResult.handler_version?.includes('API') ||
-                      imageResult.gpu_used;
+                      imageResult.gpu_used ||
+                      (imageResult.message && imageResult.message.includes('GPU'));
       
       if (isRealAI) {
         toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${imageResult.handler_version})`);
       } else {
-        toast.warning('⚠️ 로컬 처리로 변환됨 - RunPod AI Handler 업로드하면 더 고품질!');
+        // Show more specific message about what's happening
+        if (imageResult.handler_version?.includes('BULLETPROOF')) {
+          toast.warning('⚠️ BULLETPROOF Handler 응답 중 - "완성된 실제 AI Handler" 업로드하면 진짜 AI 처리!');
+        } else if (imageResult.handler_version?.includes('LOCAL')) {
+          toast.warning('⚠️ 로컬 색상 처리됨 - RunPod에 실제 AI Handler 업로드하면 Stable Diffusion 변환!');
+        } else {
+          toast.info('🔄 기본 처리 완료 - AI Handler로 업그레이드하면 더 고품질!');
+        }
       }
       
       updateStepStatus('style-conversion', 'completed');

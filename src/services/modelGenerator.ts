@@ -562,11 +562,11 @@ RiggingVersion: "Advanced_${gender}_v2.0"
     try {
       console.log('🎲 Starting 3D model generation...');
 
-      // Prepare payload for RunPod API
+      // Prepare payload for REAL RunPod API (matches our handler)
       const modelPayload = {
         input: {
-          action: "generate_3d_model_v2",
-          processed_image_data: processedImageUrl.includes('data:') ? processedImageUrl.split(',')[1] : processedImageUrl,
+          action: "generate_3d_model",  // Use the actual action from our handler
+          processed_image_url: processedImageUrl,
           config: {
             mesh_resolution: config.mesh_resolution || 256,
             texture_size: config.texture_size || 1024,
