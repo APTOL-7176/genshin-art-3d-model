@@ -966,6 +966,9 @@ function App() {
         status: 'pending' as const, 
         progress: undefined 
       })));
+
+      // Configure the image processor with API credentials
+      imageProcessor.setCredentials(apiKey, apiEndpoint);
       
       // Step 1: 실제 AI 이미지 처리 시도
       updateStepStatus('style-conversion', 'processing', 10);
@@ -976,13 +979,13 @@ function App() {
       const processingConfig = {
         score_threshold: 0.15,
         mask_dilate: 16,
-        tpose_scope: 'full_body',
+        tpose_scope: 'full_body' as const,
         guidance_scale: 12.5,
         steps: 75,
         controlnet_scales: [1.8, 0.8],
         out_long_side: 2048,
         remove_weapon: removeWeapon,
-        character_gender: characterGender,
+        character_gender: characterGender as 'auto' | 'male' | 'female',
         prompt: `Genshin Impact style, anime cel shading, ultra smooth gradients, pristine clean lineart, masterpiece quality, ultra detailed face and eyes, perfect natural hands, strict T-pose anatomy, character perfectly centered, rich vibrant colors, professional studio lighting, 8K resolution, photorealistic textures with anime style${characterGender === 'male' ? ', male character, masculine features' : characterGender === 'female' ? ', female character, feminine features' : ''}${removeWeapon ? ', no weapons, empty hands, weaponless' : ''}`,
         negative_prompt: `pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic, blurry, low quality, noise, grain, compression artifacts, bad anatomy, distorted proportions, asymmetrical features${removeWeapon ? ', weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, blade, shield, hammer, mace' : ''}`,
         enable_highres_fix: true,
@@ -995,62 +998,29 @@ function App() {
       updateStepStatus('style-conversion', 'processing', 30);
       updateStepStatus('weapon-removal', 'processing', 20);
       
-      let processedImageUrl: string;
-      let isRealAI = false;
+      // Use the actual ImageProcessor service for real processing
+      const processingResult = await imageProcessor.processImage(uploadedImage, processingConfig);
       
-      try {
-        // 실제 RunPod API 호출 시도
-        const apiResult = await callRealRunPodHandler('process_image', uploadedImage, undefined, processingConfig);
-        
-        updateStepStatus('style-conversion', 'processing', 70);
-        updateStepStatus('weapon-removal', 'processing', 60);
-        updateStepStatus('multi-view', 'processing', 30);
-        
-        // 실제 AI 처리 결과 확인
-        let imageUrl = null;
-        if (apiResult.output) {
-          imageUrl = apiResult.output.processed_image_url || 
-                    apiResult.output.image_url ||
-                    apiResult.output.result_url ||
-                    apiResult.output.genshin_image;
-        } else {
-          imageUrl = apiResult.processed_image_url ||
-                    apiResult.image_url ||
-                    apiResult.result_url ||
-                    apiResult.genshin_image;
-        }
+      updateStepStatus('style-conversion', 'processing', 70);
+      updateStepStatus('weapon-removal', 'processing', 60);
+      updateStepStatus('multi-view', 'processing', 30);
 
-        isRealAI = apiResult.handler_version?.includes('REAL_AI') ||
-                  apiResult.handler_version?.includes('API') ||
-                  apiResult.output?.gpu_used ||
-                  apiResult.gpu_used ||
-                  (apiResult.output?.message && apiResult.output.message.includes('GPU')) ||
-                  (apiResult.message && (apiResult.message.includes('GPU') || apiResult.message.includes('Stable Diffusion')));
-
-        if (imageUrl && imageUrl !== 'bulletproof_demo_image') {
-          processedImageUrl = imageUrl;
-          if (isRealAI) {
-            toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${apiResult.handler_version || 'REAL_AI'})`);
-          } else {
-            toast.info('🔄 API 응답 받음 - 더 고품질 AI Handler로 업그레이드 가능');
-          }
-        } else {
-          throw new Error('RunPod Handler가 테스트 모드 또는 실제 이미지 처리 없음');
-        }
-        
-      } catch (apiError) {
-        console.warn('RunPod API 호출 실패, 로컬 처리로 전환:', apiError);
-        
-        // 로컬 고급 처리로 폴백
-        updateStepStatus('style-conversion', 'processing', 50);
-        toast.info('🔄 로컬 고급 Genshin 스타일 처리로 전환...');
-        
-        processedImageUrl = await createGenshinStyleImage(uploadedImage);
-        isRealAI = false;
-        
-        toast.warning('⚠️ 로컬 처리 완료 - RunPod에 실제 AI Handler 업로드하면 GPU 가속 처리!');
+      if (processingResult.status !== 'SUCCESS' || !processingResult.processed_image_url) {
+        throw new Error(processingResult.error || '이미지 처리 실패');
       }
-      
+
+      const isRealAI = processingResult.handler_version?.includes('REAL_AI') ||
+                      processingResult.handler_version?.includes('GPU') ||
+                      processingResult.gpu_used;
+
+      if (isRealAI) {
+        toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${processingResult.handler_version})`);
+      } else if (processingResult.handler_version?.includes('LOCAL')) {
+        toast.warning(`⚠️ ${processingResult.error || '로컬 처리 완료 - RunPod에 실제 AI Handler 업로드하면 GPU 가속 처리!'}`);
+      } else {
+        toast.info('🔄 API 응답 받음 - 더 고품질 AI Handler로 업그레이드 가능');
+      }
+
       updateStepStatus('style-conversion', 'completed');
       updateStepStatus('weapon-removal', 'completed');
       updateStepStatus('multi-view', 'completed');
@@ -1067,111 +1037,43 @@ function App() {
       updateStepStatus('3d-model', 'processing', 10);
       toast.info('🎲 3D 모델 생성 중... (RunPod GPU 가속 시도)');
       
+      // Configure model generator with API credentials
+      modelGenerator.setCredentials(apiKey, apiEndpoint);
+      
       updateStepStatus('3d-model', 'processing', 40);
       
-      let modelFiles: ModelFile[] = [];
-      let isRealModelAI = false;
+      const modelConfig = {
+        mesh_resolution: 256,
+        texture_size: 1024,
+        enable_rigging: enableRigging,
+        character_gender: characterGender as 'auto' | 'male' | 'female',
+        output_formats: ["obj", "fbx", "glb"],
+        vertex_count: 50000,
+        uv_unwrap: true,
+        smooth_normals: true,
+        optimize_mesh: true
+      };
       
-      try {
-        // 실제 3D 모델 API 호출 시도
-        const modelApiResult = await callRealRunPodHandler('generate_3d_model', undefined, processedImageUrl, {
-          mesh_resolution: 256,
-          texture_size: 1024,
-          enable_rigging: enableRigging,
-          character_gender: characterGender,
-          output_formats: ["obj", "fbx", "glb"],
-          vertex_count: 50000,
-          uv_unwrap: true,
-          smooth_normals: true,
-          optimize_mesh: true
-        });
-        
-        updateStepStatus('3d-model', 'processing', 80);
-        
-        // API 결과에서 모델 파일 추출
-        let apiModelFiles: any[] = [];
-        if (modelApiResult.output?.model_files) {
-          apiModelFiles = modelApiResult.output.model_files;
-        } else if (modelApiResult.model_files) {
-          apiModelFiles = modelApiResult.model_files;
-        }
+      updateStepStatus('3d-model', 'processing', 80);
+      
+      // Use the proper ModelGenerator service
+      const modelResult = await modelGenerator.generateModel(processedImageUrl, modelConfig);
+      
+      if (modelResult.status !== 'SUCCESS' || !modelResult.model_files) {
+        throw new Error(modelResult.error || '3D 모델 생성 실패');
+      }
 
-        if (apiModelFiles.length > 0) {
-          // API 모델 파일들을 다운로드 가능한 형태로 변환
-          for (const file of apiModelFiles) {
-            try {
-              if (file.url && file.url.startsWith('http')) {
-                const fileResponse = await fetch(file.url);
-                const blob = await fileResponse.blob();
-                const localUrl = URL.createObjectURL(blob);
-                
-                modelFiles.push({
-                  name: file.filename || file.name || `model.${file.format || file.type || 'obj'}`,
-                  url: localUrl,
-                  type: file.format || file.type || 'obj',
-                  size: blob.size
-                });
-              } else if (file.content) {
-                // 텍스트 기반 파일 (OBJ, MTL 등)
-                const blob = new Blob([file.content], { type: 'text/plain' });
-                const localUrl = URL.createObjectURL(blob);
-                
-                modelFiles.push({
-                  name: file.filename || file.name || `model.${file.format || file.type || 'obj'}`,
-                  url: localUrl,
-                  type: file.format || file.type || 'obj',
-                  size: blob.size
-                });
-              }
-            } catch (fileError) {
-              console.warn('모델 파일 처리 오류:', fileError);
-            }
-          }
-          
-          isRealModelAI = modelApiResult.handler_version?.includes('API') || 
-                         modelApiResult.output?.gpu_used ||
-                         modelApiResult.gpu_used;
-        }
-      } catch (modelApiError) {
-        console.warn('3D 모델 API 호출 실패, 로컬 생성으로 전환:', modelApiError);
-      }
-      
-      // API 실패 시 로컬 모델 생성
-      if (modelFiles.length === 0) {
-        toast.info('🔄 로컬 고급 3D 모델 생성...');
-        
-        // 고급 로컬 모델 생성
-        const { obj: objContent, mtl: mtlContent } = await generate3DModel(processedImageUrl);
-        
-        const objBlob = new Blob([objContent], { type: 'text/plain' });
-        const mtlBlob = new Blob([mtlContent], { type: 'text/plain' });
-        
-        const objUrl = URL.createObjectURL(objBlob);
-        const mtlUrl = URL.createObjectURL(mtlBlob);
-        
-        modelFiles = [
-          {
-            name: 'genshin_character.obj',
-            url: objUrl,
-            type: 'obj',
-            size: objContent.length
-          },
-          {
-            name: 'character_material.mtl',
-            url: mtlUrl,
-            type: 'mtl',
-            size: mtlContent.length
-          }
-        ];
-      }
-      
+      const isRealModelAI = modelResult.handler_version?.includes('API') || 
+                           modelResult.handler_version?.includes('REAL') ||
+                           modelResult.gpu_used;
+
       if (isRealModelAI) {
-        toast.success(`🎲 실제 GPU로 고품질 3D 모델 생성 완료! (API)`);
+        toast.success(`🎲 실제 GPU로 고품질 3D 모델 생성 완료! (${modelResult.handler_version})`);
       } else {
-        toast.success('🎲 고급 로컬 3D 모델 생성 완료!');
+        toast.success(`🎲 고급 3D 모델 생성 완료! (${modelResult.handler_version})`);
       }
       
-      setModelFiles(modelFiles);
+      setModelFiles(modelResult.model_files);
       updateStepStatus('3d-model', 'completed');
       
       // Handle rigging step
@@ -1185,7 +1087,7 @@ function App() {
         );
         
         if (!hasRigging) {
-          // Generate additional rigging data
+          // Generate additional rigging data using model generator
           updateStepStatus('rigging', 'processing', 80);
           
           const riggingData = generateRiggingData(characterGender);
