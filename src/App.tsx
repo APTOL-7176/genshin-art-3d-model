@@ -1628,7 +1628,7 @@ function App() {
 "# ✅ BULLETPROOF v12.0 Handler 완전 활성화! (PID: XXXX)\n" +
 "# 🔥 BULLETPROOF v12.0 최종 성공: Handler 완전 준비!\n\n" +
 
-"# 💡 BULLETPROOF v12.0 전략: 환경 완전 초기화 → 검증된 패키지 → 안정적 Handler 실행\n" +
+"# 💡 BULLETPROOF v12.0 전략: 환경 완전 초기화 → 검증된 패키지 → 안���적 Handler 실행\n" +
 "# 🎯 최종 보장: Handler 절대 실패 없이 실행 + RunPod API 완벽 호환";
     
     try {
@@ -1805,7 +1805,7 @@ function App() {
               <strong>🎨 일관성 보장 + 투명 배경: Genshin Impact 스타일 통일!</strong>
             </p>
             <ul className="text-xs text-blue-300 text-left space-y-1 max-w-2xl mx-auto">
-              <li>• <strong>일관된 그림체:</strong> 모든 캐릭터가 동일한 Genshin 스타일로 변환</li>
+              <li>• <strong>일관된 그림체:</strong> 모든 캐릭터가 동일한 Genshin 스타일로 변���</li>
               <li>• <strong>투명 배경:</strong> 자동 배경 제거로 깨끗한 캐릭터 추출</li>
               <li>• <strong>색상 팔레트:</strong> 피부, 머리카락, 옷 등 일관된 색상 매핑</li>
               <li>• <strong>셀 셰이딩:</strong> 애니메이션 스타일의 단계별 명암 처리</li>
@@ -2761,7 +2761,7 @@ if __name__ == "__main__":
               {/* Weapon Removal */}
               <div className="space-y-3">
                 <Label className="flex items-center gap-2">
-                  <Sword className="w-4 h-4" />
+                    id="remove-weapon" 
                   Weapon Handling
                 </Label>
                 <div className="flex items-center space-x-2">
