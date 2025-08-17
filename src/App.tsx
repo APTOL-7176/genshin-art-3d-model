@@ -1242,10 +1242,12 @@ function App() {
       updateStepStatus('3d-model', 'processing', 10);
       toast.info('🎲 3D 모델 생성 중...');
       
-      let modelFiles = [];
+      let generatedModelFiles: ModelFile[] = [];
       
-      if (apiKey && apiEndpoint) {
+      if (apiKey && apiEndpoint && validateApiEndpoint(apiEndpoint)) {
         try {
+          updateStepStatus('3d-model', 'processing', 30);
+          
           const modelConfig = {
             mesh_resolution: 256,
             texture_size: 1024,
@@ -1258,23 +1260,42 @@ function App() {
             optimize_mesh: true
           };
           
+          console.log('🎲 RunPod로 3D 모델 생성 시도...');
+          
           const modelResult = await callRealRunPodHandler('generate_3d_model', null, processedImages[0]?.url || '', modelConfig);
           
-          if (modelResult.output?.model_files || modelResult.model_files) {
-            modelFiles = modelResult.output?.model_files || modelResult.model_files;
-            toast.success('🎲 실제 GPU로 고품질 3D 모델 생성 완료!');
+          console.log('📊 3D 모델 생성 결과:', modelResult);
+          
+          // 서버에서 받은 모델 파일 처리
+          const serverModelFiles = modelResult.output?.model_files || modelResult.model_files;
+          
+          if (serverModelFiles && Array.isArray(serverModelFiles)) {
+            generatedModelFiles = serverModelFiles.map((file: any) => ({
+              name: file.name || `model_${Date.now()}.${file.type}`,
+              url: file.url || (file.content ? `data:text/plain;base64,${btoa(file.content)}` : ''),
+              type: file.type || file.format || 'obj',
+              size: file.size || (file.content ? file.content.length : 0)
+            }));
+            
+            console.log(`✅ 서버에서 ${generatedModelFiles.length}개 모델 파일 받음`);
+            toast.success(`🎲 RunPod GPU로 고품질 3D 모델 생성 완료! (${generatedModelFiles.length}개 파일)`);
           } else {
-            throw new Error('3D 모델 생성 결과 없음');
+            throw new Error('서버에서 모델 파일을 받지 못함');
           }
+          
+          updateStepStatus('3d-model', 'processing', 80);
+          
         } catch (modelError) {
-          console.warn('RunPod 3D 모델 생성 실패, 로컬 생성:', modelError);
+          console.warn('RunPod 3D 모델 생성 실패, 로컬 생성으로 대체:', modelError);
+          toast.warning('⚠️ RunPod 3D 모델 생성 실패 - 로컬 모델 생성으로 대체');
+          
           // 로컬 3D 모델 생성으로 대체
           const { obj, mtl } = await generate3DModel(processedImages[0]?.url || '');
           
           const objBlob = new Blob([obj], { type: 'text/plain' });
           const mtlBlob = new Blob([mtl], { type: 'text/plain' });
           
-          modelFiles = [
+          generatedModelFiles = [
             {
               name: 'genshin_character.obj',
               url: URL.createObjectURL(objBlob),
@@ -1288,16 +1309,19 @@ function App() {
               size: mtl.length
             }
           ];
+          console.log('✅ 로컬 3D 모델 생성 완료');
           toast.success('🎲 로컬 3D 모델 생성 완료!');
         }
       } else {
+        console.log('🔧 API 미설정 - 로컬 3D 모델 생성');
+        
         // 로컬 3D 모델 생성
         const { obj, mtl } = await generate3DModel(processedImages[0]?.url || '');
         
         const objBlob = new Blob([obj], { type: 'text/plain' });
         const mtlBlob = new Blob([mtl], { type: 'text/plain' });
         
-        modelFiles = [
+        generatedModelFiles = [
           {
             name: 'genshin_character.obj',
             url: URL.createObjectURL(objBlob),
@@ -1311,32 +1335,44 @@ function App() {
             size: mtl.length
           }
         ];
+        console.log('✅ 로컬 3D 모델 생성 완료');
         toast.success('🎲 로컬 3D 모델 생성 완료!');
       }
       
-      setModelFiles(modelFiles);
+      // 생성된 모델 파일들을 상태에 저장
+      console.log(`📁 최종 모델 파일 ${generatedModelFiles.length}개:`, generatedModelFiles.map(f => f.name));
+      setModelFiles(generatedModelFiles);
       updateStepStatus('3d-model', 'completed');
       
       // Handle rigging step
       if (enableRigging) {
         updateStepStatus('rigging', 'processing', 50);
         
-        // Check if rigging was already included in model files
-        const hasRigging = modelFiles.some(file => 
-          file.type === 'fbx' || file.name.includes('rig')
+        // Check if rigging was already included in model files from server
+        const hasRigging = generatedModelFiles.some(file => 
+          file.type === 'fbx' || file.name.includes('rig') || file.name.includes('rigging')
         );
         
         if (!hasRigging) {
+          console.log('🦴 서버 리깅 없음 - 로컬 리깅 데이터 생성');
+          
           const riggingData = generateRiggingData(characterGender);
           const riggingBlob = new Blob([riggingData], { type: 'text/plain' });
           const riggingUrl = URL.createObjectURL(riggingBlob);
           
-          setModelFiles(prev => [...prev, {
+          const riggingFile: ModelFile = {
             name: 'character_rigging.fbx',
             url: riggingUrl,
             type: 'fbx',
             size: riggingData.length
-          }]);
+          };
+          
+          generatedModelFiles.push(riggingFile);
+          setModelFiles([...generatedModelFiles]);
+          
+          console.log('✅ 로컬 리깅 데이터 추가');
+        } else {
+          console.log('✅ 서버에서 리깅 데이터 이미 포함됨');
         }
         
         updateStepStatus('rigging', 'completed');
@@ -1344,7 +1380,17 @@ function App() {
         updateStepStatus('rigging', 'completed');
       }
 
-      toast.success(`🎮 완전 처리 완료! (${processingTime.toFixed(1)}초) - AI가 완전히 새로 그린 Genshin 캐릭터 + 투명 배경 + 3D 모델`);
+      toast.success(`🎮 완전 처리 완료! (${processingTime.toFixed(1)}초)`, {
+        description: `AI 재생성 + 3D 모델 (${generatedModelFiles.length}개 파일) + ${enableRigging ? '리깅' : '기본 모델'}`
+      });
+      
+      // Final check - ensure model files are available for download
+      console.log('📁 최종 상태:', {
+        generatedImages: generatedImages.length,
+        modelFiles: generatedModelFiles.length,
+        modelFileNames: generatedModelFiles.map(f => f.name),
+        riggingEnabled: enableRigging
+      });
       
     } catch (error) {
       console.error('Processing error:', error);
@@ -1414,17 +1460,31 @@ function App() {
     }
     
     try {
-      // Download all available model files
-      for (const modelFile of modelFiles) {
+      // Download all available model files with delay between downloads
+      for (let i = 0; i < modelFiles.length; i++) {
+        const modelFile = modelFiles[i];
+        
+        // Create download link
         const link = document.createElement('a');
         link.href = modelFile.url;
         link.download = modelFile.name;
+        link.style.display = 'none';
+        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Add small delay between downloads to prevent browser blocking
+        if (i < modelFiles.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        console.log(`✅ Downloaded: ${modelFile.name}`);
       }
       
-      toast.success(`Downloaded ${modelFiles.length} model file(s): ${modelFiles.map(f => f.name).join(', ')}`);
+      toast.success(`✅ Downloaded ${modelFiles.length} model file(s)!`, {
+        description: modelFiles.map(f => f.name).join(', ')
+      });
     } catch (error) {
       console.error('3D model download error:', error);
       toast.error('3D model download failed');
@@ -2676,26 +2736,83 @@ if __name__ == "__main__":
         </div>
 
         {/* Control Buttons */}
-        <div className="flex justify-center gap-4">
-          <Button 
-            onClick={processImage} 
-            disabled={!uploadedImage || isProcessing}
-            size="lg"
-            className="gap-2"
-          >
-            <Lightning className="w-5 h-5" />
-            {isProcessing ? 'Processing...' : hasErrorSteps() ? 'Retry Processing' : 'Start Processing'}
-          </Button>
-          <Button 
-            onClick={resetProcessing} 
-            variant={hasErrorSteps() ? "default" : "outline"}
-            size="lg"
-            className="gap-2"
-            disabled={isProcessing}
-          >
-            {hasErrorSteps() ? 'Clear Errors' : 'Reset'}
-          </Button>
-        </div>
+          <div className="flex justify-center gap-4">
+            <Button 
+              onClick={processImage} 
+              disabled={!uploadedImage || isProcessing}
+              size="lg"
+              className="gap-2"
+            >
+              <Lightning className="w-5 h-5" />
+              {isProcessing ? 'Processing...' : hasErrorSteps() ? 'Retry Processing' : 'Start Processing'}
+            </Button>
+            <Button 
+              onClick={resetProcessing} 
+              variant={hasErrorSteps() ? "default" : "outline"}
+              size="lg"
+              className="gap-2"
+              disabled={isProcessing}
+            >
+              {hasErrorSteps() ? 'Clear Errors' : 'Reset'}
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!uploadedImage) {
+                  toast.error('Please upload an image first');
+                  return;
+                }
+                
+                try {
+                  toast.info('🧪 Testing 3D model generation...');
+                  
+                  const { obj, mtl } = await generate3DModel('test');
+                  const riggingData = generateRiggingData(characterGender);
+                  
+                  const objBlob = new Blob([obj], { type: 'text/plain' });
+                  const mtlBlob = new Blob([mtl], { type: 'text/plain' });
+                  const riggingBlob = new Blob([riggingData], { type: 'text/plain' });
+                  
+                  const testFiles: ModelFile[] = [
+                    {
+                      name: 'test_character.obj',
+                      url: URL.createObjectURL(objBlob),
+                      type: 'obj',
+                      size: obj.length
+                    },
+                    {
+                      name: 'test_material.mtl',
+                      url: URL.createObjectURL(mtlBlob),
+                      type: 'mtl',
+                      size: mtl.length
+                    },
+                    {
+                      name: 'test_rigging.fbx',
+                      url: URL.createObjectURL(riggingBlob),
+                      type: 'fbx',
+                      size: riggingData.length
+                    }
+                  ];
+                  
+                  setModelFiles(testFiles);
+                  updateStepStatus('3d-model', 'completed');
+                  if (enableRigging) updateStepStatus('rigging', 'completed');
+                  
+                  toast.success('🧪 Test 3D model generated! Ready for download.');
+                  
+                } catch (error) {
+                  console.error('Test 3D model generation error:', error);
+                  toast.error('Test 3D model generation failed');
+                }
+              }}
+              variant="outline"
+              size="lg"
+              className="gap-2"
+              disabled={!uploadedImage || isProcessing}
+            >
+              <Cube className="w-5 h-5" />
+              Test 3D Model
+            </Button>
+          </div>
 
         {/* Error State Help */}
         {hasErrorSteps() && !isProcessing && (
@@ -2819,10 +2936,10 @@ if __name__ == "__main__":
               {/* Model Files List */}
               {modelFiles.length > 0 && (
                 <div className="bg-muted/30 rounded-lg p-4">
-                  <h4 className="font-medium mb-3 text-sm">Generated Files:</h4>
+                  <h4 className="font-medium mb-3 text-sm">Generated Files ({modelFiles.length}):</h4>
                   <div className="space-y-2">
                     {modelFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between text-sm">
+                      <div key={index} className="flex items-center justify-between text-sm p-2 bg-background/50 rounded">
                         <div className="flex items-center gap-2">
                           <Code className="w-4 h-4 text-muted-foreground" />
                           <span className="font-mono">{file.name}</span>
@@ -2830,20 +2947,55 @@ if __name__ == "__main__":
                             {file.type.toUpperCase()}
                           </Badge>
                         </div>
-                        <span className="text-muted-foreground text-xs">
-                          {(file.size / 1024).toFixed(1)} KB
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-xs">
+                            {file.size ? (file.size / 1024).toFixed(1) + ' KB' : 'N/A'}
+                          </span>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = file.url;
+                              link.download = file.name;
+                              link.style.display = 'none';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              toast.success(`Downloaded ${file.name}`);
+                            }}
+                          >
+                            <Download className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    💡 Individual files can be downloaded using the download button next to each file
                   </div>
                 </div>
               )}
               
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-2">
                 <Button size="lg" className="gap-2" onClick={download3DModel}>
                   <Download className="w-5 h-5" />
-                  Download 3D Model 
-                  {modelFiles.length > 0 ? ` (${modelFiles.length} files)` : ''}
+                  Download All Files 
+                  {modelFiles.length > 0 ? ` (${modelFiles.length})` : ''}
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="gap-2" 
+                  onClick={() => {
+                    console.log('🔍 현재 모델 파일 상태:', modelFiles);
+                    toast.info(`📁 모델 파일 ${modelFiles.length}개 준비됨`, {
+                      description: modelFiles.map(f => `${f.name} (${f.type})`).join(', ')
+                    });
+                  }}
+                >
+                  <Info className="w-5 h-5" />
+                  Debug Files
                 </Button>
               </div>
               
