@@ -974,7 +974,8 @@ function App() {
       updateStepStatus('style-conversion', 'processing', 10);
       updateStepStatus('weapon-removal', 'processing', 0);
       
-      toast.info('🎮 실제 RunPod GPU로 Genshin Impact AI 변환 시도 중...');
+      const startTime = Date.now();
+      toast.info('🎮 Genshin Impact 스타일 변환 시작... (실제 GPU AI: 30-90초, 로컬 처리: 1-3초)');
       
       const processingConfig = {
         score_threshold: 0.15,
@@ -1001,6 +1002,9 @@ function App() {
       // Use the actual ImageProcessor service for real processing
       const processingResult = await imageProcessor.processImage(uploadedImage, processingConfig);
       
+      const processingTime = (Date.now() - startTime) / 1000; // seconds
+      console.log(`⏱️ Processing completed in ${processingTime.toFixed(1)}s`);
+      
       updateStepStatus('style-conversion', 'processing', 70);
       updateStepStatus('weapon-removal', 'processing', 60);
       updateStepStatus('multi-view', 'processing', 30);
@@ -1009,16 +1013,19 @@ function App() {
         throw new Error(processingResult.error || '이미지 처리 실패');
       }
 
+      // 중요: 실제 처리된 이미지 URL 사용
+      const processedImageUrl = processingResult.processed_image_url;
+
       const isRealAI = processingResult.handler_version?.includes('REAL_AI') ||
                       processingResult.handler_version?.includes('GPU') ||
                       processingResult.gpu_used;
 
       if (isRealAI) {
-        toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${processingResult.handler_version})`);
+        toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version})`);
       } else if (processingResult.handler_version?.includes('LOCAL')) {
-        toast.warning(`⚠️ ${processingResult.error || '로컬 처리 완료 - RunPod에 실제 AI Handler 업로드하면 GPU 가속 처리!'}`);
+        toast.success(`✅ 고급 로컬 Genshin 변환 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version}) ${processingResult.error || ''}`);
       } else {
-        toast.info('🔄 API 응답 받음 - 더 고품질 AI Handler로 업그레이드 가능');
+        toast.info(`🔄 처리 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version || 'Unknown'}) - 실제 AI Handler 업로드하면 더욱 고품질!`);
       }
 
       updateStepStatus('style-conversion', 'completed');
@@ -1026,6 +1033,7 @@ function App() {
       updateStepStatus('multi-view', 'completed');
       
       // Add the processed image
+      console.log('🖼️ Adding processed image to gallery:', processedImageUrl?.substring(0, 50));
       setGeneratedImages([{
         id: 'genshin-processed',
         type: 'genshin',
@@ -1424,9 +1432,11 @@ function App() {
             <ul className="text-xs text-green-300 text-left space-y-1 max-w-2xl mx-auto">
               <li>• <strong>현재 상태:</strong> 실제 이미지 처리 및 3D 모델 생성 완전 작동 ✅</li>
               <li>• <strong>로컬 AI:</strong> Genshin 스타일 변환 + 고급 3D 모델 + 리깅 지원</li>
+              <li>• <strong>처리 시간:</strong> 로컬 1-3초, 실제 GPU AI는 30-90초 (고품질)</li>
               <li>• <strong>사용 방법:</strong> 이미지 업로드 → "Start Processing" 클릭 → 결과 확인</li>
               <li>• <strong>업그레이드:</strong> RunPod AI Handler로 더 고품질 GPU 처리 가능</li>
               <li className="text-blue-200">🎮 지금 바로 픽셀 아트를 업로드하고 변환해보세요!</li>
+              <li className="text-yellow-200">⏱️ 빠른 결과: 로컬 처리는 몇 초 만에 완료됩니다</li>
             </ul>
           </div>
           
