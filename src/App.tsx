@@ -808,7 +808,7 @@ function App() {
             "        import traceback",
             "        traceback.print_exc()",
             "HANDLER_END",
-            "echo '🧪 Handler 임포트 테스트:'",
+            "echo '���� Handler 임포트 테스트:'",
             "python3 -c 'import bulletproof_handler; print(\"✅ BULLETPROOF Handler 임포트 성공\")' || exit 1",
             "echo '🚀 BULLETPROOF Handler 시작 (백그라운드):'",
             "nohup python3 bulletproof_handler.py > bulletproof.log 2>&1 & HANDLER_PID=$!",
@@ -1444,7 +1444,7 @@ function App() {
         toast.warning('⚠️ BULLETPROOF 테스트 Handler 감지!\n\n실제 AI 처리를 위해:\n1. "완성된 실제 AI Handler" 코드 복사\n2. RunPod 컨테이너의 handler.py 교체\n3. AI 패키지 설치: pip install diffusers transformers controlnet_aux');
         
       } else {
-        toast.info(`🔄 API 연결 성공하지만 Handler 타입 확인 필요\n\nHandler: ${result.handler_version || 'Unknown'}\n상태: ${result.status || 'Unknown'}\n\n실제 AI 처리를 위해 "완성된 실제 AI Handler" 업로드 필요`);
+        toast.info(`🔄 API 연결 성공하지만 Handler 타입 확��� 필요\n\nHandler: ${result.handler_version || 'Unknown'}\n상태: ${result.status || 'Unknown'}\n\n실제 AI 처리를 위해 "완성된 실제 AI Handler" 업로드 필요`);
       }
       
     } catch (error) {
@@ -1726,7 +1726,7 @@ def apply_genshin_style_advanced(image):
             kmeans = KMeans(n_clusters=k, random_state=0, n_init=10).fit(data)
             new_colors = kmeans.cluster_centers_[kmeans.labels_]
             
-            # 결과를 이미지 형태로 복원
+            # 결과를 이미지 형태로 복���
             segmented_image = new_colors.reshape(img_array.shape).astype(np.uint8)
             result_image = Image.fromarray(segmented_image)
             
