@@ -2489,8 +2489,11 @@ if __name__ == "__main__":
 `;
                       
                       navigator.clipboard.writeText(realHandlerCode);
-                      toast.success('🎮 완성된 실제 AI Handler 코드 복사완료!\n\n📋 사용법:\n1. RunPod 터미널: mv handler.py handler_backup.py\n2. 새 파일: nano handler.py (코드 붙여넣기)\n3. 패키지: pip install diffusers transformers opencv-python\n4. 시작: python3 handler.py\n5. 테스트: "Test v12.0 BULLETPROOF" 클릭');
-                    }} variant="outline" className="flex-1 gap-2">\n                      <Code className="w-4 h-4" />\n                      완성된 실제 AI Handler\n                    </Button>
+                      toast.success('🎮 완성된 실제 AI Handler 코드 복사완료!\\n\\n📋 사용법:\\n1. RunPod 터미널: mv handler.py handler_backup.py\\n2. 새 파일: nano handler.py (코드 붙여넣기)\\n3. 패키지: pip install diffusers transformers opencv-python\\n4. 시작: python3 handler.py\\n5. 테스트: "Test v12.0 BULLETPROOF" 클릭');
+                    }} variant="outline" className="flex-1 gap-2">
+                      <Code className="w-4 h-4" />
+                      완성된 실제 AI Handler
+                    </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Lightning className="w-4 h-4" />
                       Test v13.0 ULTRA BULLETPROOF
