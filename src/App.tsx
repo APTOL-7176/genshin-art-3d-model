@@ -1008,7 +1008,6 @@ function App() {
       } else {
         toast.success('🎲 고급 로컬 3D 모델 생성 완료!');
       }
-      }
       
       setModelFiles(modelResult.model_files);
       updateStepStatus('3d-model', 'completed');
@@ -1585,108 +1584,6 @@ map_Kd character_texture.png
     
     return {"obj": obj_content, "mtl": mtl_content}
 
-def handler(job):
-    print(f"📥 실제 RunPod Handler 호출: {job}")
-    print(f"📥 실제 RunPod Handler 호출: {job}")
-    try:
-        job_input = job.get("input", {})
-        action = job_input.get("action", "unknown")
-        
-        print(f"🎯 처리 액션: {action}")
-        
-        if action == "process_image":
-        if action == "process_image":
-            config = job_input.get("config", {})
-            
-            if not image_data:
-                raise ValueError("이미지 데이터가 제공되지 않음")
-            
-            print("🖼️ GPU로 이미지 처리 중...")
-            image = base64_to_pil(image_data)
-            
-            # 실제 GPU Genshin 변환
-            processed_image = convert_to_genshin_style(image, config)
-            processed_url = pil_to_base64(processed_image)
-            
-            return {
-                "status": "SUCCESS",
-                "output": {
-                    "processed_image_url": processed_url,
-                    "message": "🎮 실제 GPU로 Genshin Impact 스타일 변환 완료!",
-                    "config_used": config,
-                    "gpu_used": device
-                }
-            }
-            
-        elif action == "generate_3d_model":
-            print("🎲 3D 모델 생성...")
-            
-            # 3D 모델 생성
-            model_data = generate_3d_model_data()
-            
-            # Base64 인코딩
-            obj_b64 = base64.b64encode(model_data['obj'].encode()).decode()
-            mtl_b64 = base64.b64encode(model_data['mtl'].encode()).decode()
-            
-            model_files = [
-                {
-                    "filename": "genshin_character.obj",
-                    "format": "obj", 
-                    "url": f"data:application/octet-stream;base64,{obj_b64}"
-                },
-                {
-                    "filename": "character_material.mtl",
-                    "format": "mtl",
-                    "url": f"data:application/octet-stream;base64,{mtl_b64}"
-                }
-            ]
-            
-            return {
-                "status": "SUCCESS",
-                "output": {
-                    "model_files": model_files,
-                    "message": "🎲 3D 모델 생성 완료!"
-                }
-            }
-            
-        elif action == "health_check" or action.startswith("diagnostic"):
-            gpu_info = {
-                "device": device,
-                "cuda_available": torch.cuda.is_available(),
-                "models_loaded": pipe is not None and openpose is not None
-            }
-            
-            if torch.cuda.is_available():
-                gpu_info["gpu_name"] = torch.cuda.get_device_name()
-                gpu_info["gpu_memory"] = f"{torch.cuda.get_device_properties(0).total_memory / 1e9:.1f}GB"
-            
-            return {
-                "status": "SUCCESS",
-                "message": "🎮 실제 AI 처리 Handler 완전 활성화!",
-                "gpu_info": gpu_info,
-                "handler_version": "REAL_AI_v1.0"
-            }
-            
-        else:
-            return {
-                "status": "ERROR",
-                "error": f"알 수 없는 액션: {action}",
-                "available_actions": ["process_image", "generate_3d_model", "health_check"]
-            }
-            
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"❌ Handler 에러: {e}")
-        print(f"Stack trace: {error_trace}")
-        
-        return {
-            "status": "ERROR",
-            "error": str(e),
-            "traceback": error_trace,
-            "handler_version": "REAL_AI_v1.0"
-        }
-
 if __name__ == "__main__":
     print("🚀 실제 Genshin 3D AI Handler 시작!")
     print(f"🎮 GPU: {torch.cuda.is_available()}")
@@ -1696,30 +1593,15 @@ if __name__ == "__main__":
     
     runpod.serverless.start({"handler": handler})
 
-"""
-=== 📋 RunPod 업로드 방법 ===
-
-1. RunPod 컨테이너 터미널 접속 (SSH 또는 Jupyter)
-
-2. 현재 테스트 핸들러 백업:
-   mv handler.py handler_bulletproof_backup.py
-
-3. 실제 AI 핸들러 생성:
-   nano handler.py
-   (위 전체 코드를 붙여넣고 저장)
-
-4. 필요한 AI 패키지 설치:
-   pip install diffusers transformers controlnet_aux opencv-python
-
-5. 핸들러 재시작:
-   python handler.py
-
-6. 테스트:
-   웹앱에서 "Test v12.0 BULLETPROOF" 클릭
-   → "🎮 실제 AI 처리 Handler 완전 활성화!" 메시지 확인
-
-✅ 이제 실제 GPU로 Genshin Impact 스타일 변환이 됩니다!
-"""`;
+# === 📋 RunPod 업로드 방법 ===
+# 1. RunPod 컨테이너 터미널 접속 (SSH 또는 Jupyter)
+# 2. 현재 테스트 핸들러 백업: mv handler.py handler_bulletproof_backup.py
+# 3. 실제 AI 핸들러 생성: nano handler.py (위 전체 코드를 붙여넣고 저장)
+# 4. 필요한 AI 패키지 설치: pip install diffusers transformers controlnet_aux opencv-python
+# 5. 핸들러 재시작: python handler.py
+# 6. 테스트: 웹앱에서 "Test v12.0 BULLETPROOF" 클릭
+# ✅ 이제 실제 GPU로 Genshin Impact 스타일 변환이 됩니다!
+`;
                       
                       navigator.clipboard.writeText(realHandlerCode);
                       toast.success('🎮 완성된 실제 AI Handler 코드 복사완료! RunPod에 업로드하면 진짜 처리 시작!');
