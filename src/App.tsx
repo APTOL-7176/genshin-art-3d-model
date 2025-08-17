@@ -950,7 +950,6 @@ function App() {
       if (isRealAI) {
         toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${imageResult.handler_version})`);
       } else {
-        // Show more specific message about what's happening
         if (imageResult.handler_version?.includes('BULLETPROOF')) {
           toast.warning('⚠️ BULLETPROOF Handler 응답 중 - "완성된 실제 AI Handler" 업로드하면 진짜 AI 처리!');
         } else if (imageResult.handler_version?.includes('LOCAL')) {
@@ -959,6 +958,7 @@ function App() {
           toast.info('🔄 기본 처리 완료 - AI Handler로 업그레이드하면 더 고품질!');
         }
       }
+      }
       
       updateStepStatus('style-conversion', 'completed');
       updateStepStatus('weapon-removal', 'completed');
@@ -966,7 +966,6 @@ function App() {
       
       // Add the processed image
       setGeneratedImages([{
-        id: 'genshin-processed',
         type: 'genshin',
         url: imageResult.processed_image_url,
         filename: 'genshin_style_conversion.png'
@@ -1588,7 +1587,7 @@ map_Kd character_texture.png
 
 def handler(job):
     print(f"📥 실제 RunPod Handler 호출: {job}")
-    
+    print(f"📥 실제 RunPod Handler 호출: {job}")
     try:
         job_input = job.get("input", {})
         action = job_input.get("action", "unknown")
@@ -1596,7 +1595,7 @@ def handler(job):
         print(f"🎯 처리 액션: {action}")
         
         if action == "process_image":
-            image_data = job_input.get("image_data")
+        if action == "process_image":
             config = job_input.get("config", {})
             
             if not image_data:
@@ -1764,7 +1763,7 @@ if __name__ == "__main__":
                       <p><strong>v11.0 실패 원인:</strong> RunPod 패키지 버전 충돌 + 기존 패키지 간섭</p>
                       <p><strong>근본 문제:</strong> 복잡한 dependency chain이 RunPod 서버리스 시작 방해</p>
                       <p><strong>추가 발견:</strong> Python 환경 불일치 + 백그라운드 프로세스 관리 문제</p>
-                      <p><strong>BULLETPROOF 해결:</strong> 환경 완전 초기화 + 검증된 패키지 + 안정적 실행</p>
+                      <p><strong>BULLETPROOF ���결:</strong> 환경 완전 초기화 + 검증된 패키지 + 안정적 실행</p>
                       <p className="text-green-300 font-medium">✅ v12.0 BULLETPROOF로 완전 해결!</p>
                     </div>
                   </div>
