@@ -445,6 +445,7 @@ function App() {
       };
 
       console.log('🎮 Calling REAL RunPod API for', action);
+      console.log('📊 Request payload action:', payload.input.action);
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -461,15 +462,29 @@ function App() {
       }
 
       const result = await response.json();
-      console.log('📊 RunPod API result:', result);
+      console.log('📊 RunPod API complete result:', result);
 
       // Handle both sync and async responses
       const isSync = apiEndpoint.includes('/runsync');
       
       if (!isSync && result.id) {
         // Poll for async completion
+        console.log('⏳ Polling for async job completion...');
         return await waitForJobCompletion(result);
       }
+      
+      // For sync responses, check multiple possible response structures
+      if (result.error || result.error_message) {
+        throw new Error(result.error || result.error_message);
+      }
+      
+      // Log the full result structure for debugging
+      console.log('🔍 Full sync result structure:', {
+        status: result.status,
+        output: result.output,
+        message: result.message,
+        handler_version: result.handler_version
+      });
       
       return result;
       
@@ -999,33 +1014,53 @@ function App() {
       updateStepStatus('style-conversion', 'processing', 30);
       updateStepStatus('weapon-removal', 'processing', 20);
       
-      // Use the actual ImageProcessor service for real processing
-      const processingResult = await imageProcessor.processImage(uploadedImage, processingConfig);
+      // 실제 RunPod API 호출 - 직접 호출로 변경
+      const processingResult = await callRealRunPodHandler('process_image', uploadedImage, uploadedImageUrl, processingConfig);
       
       const processingTime = (Date.now() - startTime) / 1000; // seconds
       console.log(`⏱️ Processing completed in ${processingTime.toFixed(1)}s`);
+      console.log('📊 Full API Response:', processingResult);
       
       updateStepStatus('style-conversion', 'processing', 70);
       updateStepStatus('weapon-removal', 'processing', 60);
       updateStepStatus('multi-view', 'processing', 30);
 
-      if (processingResult.status !== 'SUCCESS' || !processingResult.processed_image_url) {
-        throw new Error(processingResult.error || '이미지 처리 실패');
+      // 결과 검증 - 실제 처리된 이미지 확인
+      let finalImageUrl = null;
+      
+      if (processingResult.output) {
+        finalImageUrl = processingResult.output.processed_image_url || 
+                       processingResult.output.image_url ||
+                       processingResult.output.result_url;
+      }
+      
+      if (!finalImageUrl) {
+        finalImageUrl = processingResult.processed_image_url ||
+                       processingResult.image_url ||
+                       processingResult.result_url;
+      }
+      
+      if (!finalImageUrl) {
+        console.log('❌ No processed image URL found in response:', processingResult);
+        throw new Error('실제 AI 처리된 이미지를 받지 못했습니다 - Handler에서 AI 모델 로딩 확인 필요');
       }
 
       // 중요: 실제 처리된 이미지 URL 사용
-      const processedImageUrl = processingResult.processed_image_url;
+      const processedImageUrl = finalImageUrl;
 
       const isRealAI = processingResult.handler_version?.includes('REAL_AI') ||
                       processingResult.handler_version?.includes('GPU') ||
-                      processingResult.gpu_used;
+                      processingResult.gpu_used ||
+                      processingResult.output?.gpu_used;
 
       if (isRealAI) {
-        toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version})`);
-      } else if (processingResult.handler_version?.includes('LOCAL')) {
-        toast.success(`✅ 고급 로컬 Genshin 변환 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version}) ${processingResult.error || ''}`);
+        toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version || processingResult.output?.handler_version})`);
+      } else if (processingResult.handler_version?.includes('LOCAL') || processingResult.handler_version?.includes('ENHANCED')) {
+        toast.success(`✅ 고급 로컬 Genshin 변환 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version}) - 실제 AI Handler 업로드하면 더욱 고품질!`);
+      } else if (processingResult.handler_version?.includes('BULLETPROOF')) {
+        toast.warning(`⚠️ 테스트 Handler 응답 (${processingTime.toFixed(1)}초) - "완성된 실제 AI Handler" 업로드 필요!`);
       } else {
-        toast.info(`🔄 처리 완료! (${processingTime.toFixed(1)}초, ${processingResult.handler_version || 'Unknown'}) - 실제 AI Handler 업로드하면 더욱 고품질!`);
+        toast.info(`🔄 처리 완료! (${processingTime.toFixed(1)}초) - AI Handler 상태: ${processingResult.handler_version || 'Unknown'}`);
       }
 
       updateStepStatus('style-conversion', 'completed');
@@ -1041,12 +1076,9 @@ function App() {
         filename: 'genshin_style_conversion.png'
       }]);
 
-      // Step 2: 3D 모델 생성 시도
+      // Step 2: 3D 모델 생성 시도 - 실제 API 호출
       updateStepStatus('3d-model', 'processing', 10);
       toast.info('🎲 3D 모델 생성 중... (RunPod GPU 가속 시도)');
-      
-      // Configure model generator with API credentials
-      modelGenerator.setCredentials(apiKey, apiEndpoint);
       
       updateStepStatus('3d-model', 'processing', 40);
       
@@ -1064,24 +1096,54 @@ function App() {
       
       updateStepStatus('3d-model', 'processing', 80);
       
-      // Use the proper ModelGenerator service
-      const modelResult = await modelGenerator.generateModel(processedImageUrl, modelConfig);
+      // 직접 RunPod API 호출 - 3D 모델 생성
+      const modelResult = await callRealRunPodHandler('generate_3d_model', null, processedImageUrl, modelConfig);
       
-      if (modelResult.status !== 'SUCCESS' || !modelResult.model_files) {
-        throw new Error(modelResult.error || '3D 모델 생성 실패');
+      console.log('🎲 3D Model API Response:', modelResult);
+      
+      // 결과에서 모델 파일 추출
+      let modelFiles = [];
+      
+      if (modelResult.output?.model_files) {
+        modelFiles = modelResult.output.model_files;
+      } else if (modelResult.model_files) {
+        modelFiles = modelResult.model_files;
+      } else {
+        // Fallback - generate basic model files
+        console.log('⚠️ No model files from API, generating fallback models...');
+        const { obj, mtl } = await generate3DModel(processedImageUrl);
+        
+        const objBlob = new Blob([obj], { type: 'text/plain' });
+        const mtlBlob = new Blob([mtl], { type: 'text/plain' });
+        
+        modelFiles = [
+          {
+            name: 'genshin_character.obj',
+            url: URL.createObjectURL(objBlob),
+            type: 'obj',
+            size: obj.length
+          },
+          {
+            name: 'character_material.mtl',
+            url: URL.createObjectURL(mtlBlob),
+            type: 'mtl',
+            size: mtl.length
+          }
+        ];
       }
 
       const isRealModelAI = modelResult.handler_version?.includes('API') || 
                            modelResult.handler_version?.includes('REAL') ||
-                           modelResult.gpu_used;
+                           modelResult.gpu_used ||
+                           modelResult.output?.gpu_used;
 
       if (isRealModelAI) {
-        toast.success(`🎲 실제 GPU로 고품질 3D 모델 생성 완료! (${modelResult.handler_version})`);
+        toast.success(`🎲 실제 GPU로 고품질 3D 모델 생성 완료! (${modelResult.handler_version || modelResult.output?.handler_version})`);
       } else {
-        toast.success(`🎲 고급 3D 모델 생성 완료! (${modelResult.handler_version})`);
+        toast.success(`🎲 3D 모델 생성 완료! (${modelResult.handler_version || 'LOCAL'}) - AI Handler로 더욱 고품질 가능`);
       }
       
-      setModelFiles(modelResult.model_files);
+      setModelFiles(modelFiles);
       updateStepStatus('3d-model', 'completed');
       
       // Handle rigging step
