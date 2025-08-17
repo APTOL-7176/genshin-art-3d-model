@@ -958,7 +958,6 @@ function App() {
           toast.info('🔄 기본 처리 완료 - AI Handler로 업그레이드하면 더 고품질!');
         }
       }
-      }
       
       updateStepStatus('style-conversion', 'completed');
       updateStepStatus('weapon-removal', 'completed');
@@ -1008,6 +1007,7 @@ function App() {
         toast.success(`🎲 GPU로 고품질 3D 모델 생성 완료! (${modelResult.handler_version})`);
       } else {
         toast.success('🎲 고급 로컬 3D 모델 생성 완료!');
+      }
       }
       
       setModelFiles(modelResult.model_files);
