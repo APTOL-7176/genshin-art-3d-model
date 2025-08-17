@@ -1017,25 +1017,39 @@ function App() {
           ]
         }
       };
-          commands: [
-            "echo '🛡️ v12.0 BULLETPROOF - Handler 실패 근본 원인 해결'",
-            "echo 'System Information:'",
-            "pwd && echo 'Python:' && python3 --version",
-            "echo 'Available disk space:' && df -h | head -2",
-            "echo '🔍 RunPod 패키지 상태 확인:'",
-            "pip show runpod || echo '❌ RunPod not installed'",
-            "echo '🧹 환경 완전 초기화 (충돌 패키지 제거):'",
-            "pip uninstall -y runpod pillow torch torchvision numpy scipy opencv-python transformers diffusers accelerate --quiet || true",
-            "pip cache purge --quiet || true",
-            "echo '📥 검증된 RunPod 1.6.2 설치:'",
-            "pip install --no-cache-dir --force-reinstall runpod==1.6.2 || exit 1",
-            "echo '✅ RunPod 설치 확인:'",
-            "python3 -c 'import runpod; print(\\\"RunPod version:\\\", runpod.__version__)' || exit 1",
-            "echo '🛡️ v12.0 BULLETPROOF Handler 생성:'",
-            "cat > bulletproof_handler.py << 'HANDLER_END'",
-            "#!/usr/bin/env python3",
-            "# BULLETPROOF v12.0 Handler - 절대 실패하지 않음",
-            "import sys",
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(setupPayload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Container initialization failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('Container initialization result:', result);
+      
+      // Handle both sync and async responses
+      if (isSync) {
+        if (result.output && result.output.includes && result.output.includes('Handler successfully started')) {
+          return { id: 'sync-setup', ...result, status: 'COMPLETED' };
+        }
+        return { id: 'sync-setup', ...result, status: 'COMPLETED' };
+      } else {
+        // For async, poll for completion
+        return await waitForJobCompletion(result);
+      }
+    } catch (error) {
+      console.error('Container initialization error:', error);
+      
+      // Provide more specific error handling
+      if (error instanceof Error && error.message.includes('404')) {
             "print('🛡️ BULLETPROOF v12.0 Handler 시작...')",
             "print('Python path:', sys.executable)",
             "print('Python version:', sys.version)",
