@@ -1,66 +1,153 @@
 /**
- * ImageProcessor Service - Advanced image processing for Genshin Impact style conversion
- * Handles pixel art to anime style conversion with GPU optimization
+ * Advanced Image Processing Service
+ * Handles client-side image processing and RunPod API communication
  */
-export class ImageProcessor {
-  private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D;
 
-  constructor() {
-    this.canvas = document.createElement('canvas');
-    const context = this.canvas.getContext('2d');
-    if (!context) {
-      throw new Error('Canvas 2D context not available');
-    }
-    this.ctx = context;
+export interface ProcessingConfig {
+  score_threshold?: number;
+  mask_dilate?: number;
+  tpose_scope?: 'full_body' | 'upper_body';
+  guidance_scale?: number;
+  steps?: number;
+  controlnet_scales?: number[];
+  out_long_side?: number;
+  remove_weapon?: boolean;
+  character_gender?: 'auto' | 'male' | 'female';
+  prompt?: string;
+  negative_prompt?: string;
+  enable_highres_fix?: boolean;
+  highres_scale?: number;
+  cfg_rescale?: number;
+  eta?: number;
+  sampler?: string;
+}
+
+export interface ProcessingResult {
+  status: 'SUCCESS' | 'ERROR';
+  processed_image_url?: string;
+  error?: string;
+  handler_version?: string;
+  config_used?: ProcessingConfig;
+  processing_time?: number;
+  gpu_used?: string;
+}
+
+export class ImageProcessor {
+  private apiKey: string = '';
+  private apiEndpoint: string = '';
+
+  setCredentials(apiKey: string, endpoint: string) {
+    this.apiKey = apiKey;
+    this.apiEndpoint = endpoint;
   }
 
   /**
-   * Convert pixel art to Genshin Impact anime style with advanced processing
+   * Convert File to base64 string for API transmission
    */
-  async processPixelToGenshin(imageFile: File, options: {
-    removePixelation: boolean;
-    enhanceColors: boolean;
-    applyTposeConversion: boolean;
-    targetResolution: number;
-  }): Promise<string> {
+  private async fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1]; // Remove data URL prefix
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Apply Genshin Impact style processing locally as fallback
+   */
+  private async applyGenshinStyleLocal(imageFile: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
       
       img.onload = () => {
-        try {
-          // Setup canvas with target resolution
-          const { targetResolution = 1024 } = options;
-          this.canvas.width = targetResolution;
-          this.canvas.height = targetResolution;
-          
-          // Draw and scale the image
-          this.ctx.drawImage(img, 0, 0, targetResolution, targetResolution);
-          
-          // Get image data for processing
-          const imageData = this.ctx.getImageData(0, 0, targetResolution, targetResolution);
-          const data = imageData.data;
-          
-          // Apply Genshin Impact style processing
-          this.applyGenshinStyleFilters(data, options);
-          
-          // Put processed data back
-          this.ctx.putImageData(imageData, 0, 0);
-          
-          // Apply final enhancements
-          this.applyFinalEnhancements();
-          
-          // Convert to data URL
-          const processedDataUrl = this.canvas.toDataURL('image/png');
-          resolve(processedDataUrl);
-        } catch (error) {
-          reject(error);
+        if (!ctx) {
+          reject(new Error('Canvas context not available'));
+          return;
         }
+
+        // Set canvas size with max 1024px
+        const maxSize = 1024;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw original image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Get image data for processing
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        
+        // Apply Genshin Impact style processing
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          
+          // Cel shading effect - posterize colors
+          const levels = 6;
+          const factor = 255 / levels;
+          
+          data[i] = Math.round(r / factor) * factor;     // Red
+          data[i + 1] = Math.round(g / factor) * factor; // Green
+          data[i + 2] = Math.round(b / factor) * factor; // Blue
+          
+          // Enhance vibrance for anime style
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          const diff = max - min;
+          
+          if (diff > 30) {
+            const enhancement = 1.4;
+            const centerShift = 128;
+            data[i] = Math.min(255, Math.max(0, (data[i] - centerShift) * enhancement + centerShift));
+            data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - centerShift) * enhancement + centerShift));
+            data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - centerShift) * enhancement + centerShift));
+          }
+        }
+        
+        // Apply processed image data back to canvas
+        ctx.putImageData(imageData, 0, 0);
+        
+        // Add outline effect for anime style
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.filter = 'contrast(1.3) saturate(1.6) brightness(1.1)';
+        ctx.drawImage(canvas, 0, 0);
+        
+        // Reset composite operation
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.filter = 'none';
+        
+        // Convert to data URL
+        const processedUrl = canvas.toDataURL('image/png');
+        resolve(processedUrl);
       };
       
-      img.onerror = () => reject(new Error('Failed to load image'));
+      img.onerror = () => {
+        reject(new Error('Failed to load image for processing'));
+      };
       
-      // Load the image
+      // Load the uploaded image
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
@@ -72,248 +159,198 @@ export class ImageProcessor {
   }
 
   /**
-   * Apply Genshin Impact style filters to image data
+   * Process image using RunPod API with GPU acceleration
    */
-  private applyGenshinStyleFilters(data: Uint8ClampedArray, options: {
-    removePixelation: boolean;
-    enhanceColors: boolean;
-    applyTposeConversion: boolean;
-  }) {
-    const { removePixelation, enhanceColors } = options;
-    
-    for (let i = 0; i < data.length; i += 4) {
-      let r = data[i];
-      let g = data[i + 1];
-      let b = data[i + 2];
-      const a = data[i + 3];
+  async processImage(imageFile: File, config: ProcessingConfig = {}): Promise<ProcessingResult> {
+    try {
+      console.log('🎮 Starting GPU-accelerated image processing...');
       
-      if (a === 0) continue; // Skip transparent pixels
+      // Convert image to base64
+      const imageBase64 = await this.fileToBase64(imageFile);
       
-      if (removePixelation) {
-        // Smooth pixelated edges with cel shading
-        const levels = 6; // Reduced levels for smoother gradients
-        const factor = 255 / levels;
-        
-        r = Math.round(r / factor) * factor;
-        g = Math.round(g / factor) * factor;
-        b = Math.round(b / factor) * factor;
+      // Build optimized prompt for high-quality processing
+      const basePrompt = config.prompt || 
+        "Genshin Impact style, anime cel shading, ultra smooth gradients, pristine clean lineart, " +
+        "masterpiece quality, ultra detailed face and eyes, perfect natural hands, strict T-pose anatomy, " +
+        "character perfectly centered, rich vibrant colors, professional studio lighting, 8K resolution, " +
+        "photorealistic textures with anime style";
+      
+      let negativePrompt = config.negative_prompt || 
+        "pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, " +
+        "extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic, blurry, low quality, " +
+        "noise, grain, compression artifacts, bad anatomy, distorted proportions, asymmetrical features";
+
+      // Add gender-specific prompts
+      let enhancedPrompt = basePrompt;
+      if (config.character_gender === "male") {
+        enhancedPrompt += ", male character, masculine features";
+      } else if (config.character_gender === "female") {
+        enhancedPrompt += ", female character, feminine features";
       }
-      
-      if (enhanceColors) {
-        // Enhance colors for anime style
-        const saturationBoost = 1.3;
-        const brightnessBoost = 1.1;
-        
-        // Convert to HSL-like processing
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const diff = max - min;
-        
-        if (diff > 0) {
-          // Boost saturation
-          const center = (max + min) / 2;
-          r = Math.min(255, Math.max(0, (r - center) * saturationBoost + center));
-          g = Math.min(255, Math.max(0, (g - center) * saturationBoost + center));
-          b = Math.min(255, Math.max(0, (b - center) * saturationBoost + center));
+
+      // Add weapon removal prompts if enabled
+      if (config.remove_weapon) {
+        enhancedPrompt += ", no weapons, empty hands, weaponless";
+        negativePrompt += ", weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, blade, shield, hammer, mace";
+      }
+
+      // Prepare high-quality processing payload
+      const processingPayload = {
+        input: {
+          action: "process_image_v2",
+          image_data: imageBase64,
+          image_format: imageFile.type.split('/')[1],
+          config: {
+            score_threshold: config.score_threshold || 0.15,
+            mask_dilate: config.mask_dilate || 16,
+            tpose_scope: config.tpose_scope || "full_body",
+            guidance_scale: config.guidance_scale || 12.5,
+            steps: config.steps || 75,
+            controlnet_scales: config.controlnet_scales || [1.8, 0.8],
+            out_long_side: config.out_long_side || 2048,
+            remove_weapon: config.remove_weapon || false,
+            character_gender: config.character_gender || "auto",
+            prompt: enhancedPrompt,
+            negative_prompt: negativePrompt,
+            // Ultra high-quality settings for high-end hardware
+            enable_highres_fix: config.enable_highres_fix || true,
+            highres_scale: config.highres_scale || 2.0,
+            batch_size: 1,
+            cfg_rescale: config.cfg_rescale || 0.7,
+            eta: config.eta || 0.0,
+            sampler: config.sampler || "DPM++ 2M Karras"
+          }
         }
-        
-        // Apply brightness boost
-        r = Math.min(255, r * brightnessBoost);
-        g = Math.min(255, g * brightnessBoost);
-        b = Math.min(255, b * brightnessBoost);
-      }
-      
-      // Apply Genshin-style color corrections
-      r = this.applyGenshinColorCurve(r);
-      g = this.applyGenshinColorCurve(g);
-      b = this.applyGenshinColorCurve(b);
-      
-      data[i] = r;
-      data[i + 1] = g;
-      data[i + 2] = b;
-    }
-  }
-
-  /**
-   * Apply Genshin Impact color curve for that distinct anime look
-   */
-  private applyGenshinColorCurve(value: number): number {
-    // Genshin Impact has a specific color curve that emphasizes mid-tones
-    // and creates that distinctive anime look
-    const normalized = value / 255;
-    
-    // Apply S-curve for contrast
-    const enhanced = normalized < 0.5 
-      ? 2 * normalized * normalized 
-      : 1 - 2 * (1 - normalized) * (1 - normalized);
-    
-    // Slight lift in shadows and highlights
-    const lifted = enhanced * 0.9 + 0.05;
-    
-    return Math.min(255, Math.max(0, lifted * 255));
-  }
-
-  /**
-   * Apply final enhancements like edge enhancement and glow effects
-   */
-  private applyFinalEnhancements() {
-    // Apply subtle glow effect common in Genshin Impact art
-    this.ctx.globalCompositeOperation = 'screen';
-    this.ctx.filter = 'blur(2px)';
-    this.ctx.globalAlpha = 0.3;
-    this.ctx.drawImage(this.canvas, 0, 0);
-    
-    // Reset compositing
-    this.ctx.globalCompositeOperation = 'source-over';
-    this.ctx.filter = 'none';
-    this.ctx.globalAlpha = 1.0;
-  }
-
-  /**
-   * Generate multiple views (front, side, back) for 3D modeling
-   */
-  async generateMultiViews(processedImageUrl: string): Promise<{
-    front: string;
-    side: string;
-    back: string;
-  }> {
-    // This would typically use AI models for view generation
-    // For now, we'll create variations of the processed image
-    
-    return new Promise((resolve) => {
-      const img = new Image();
-      
-      img.onload = () => {
-        const front = processedImageUrl; // Use processed image as front view
-        
-        // Generate side view (simplified)
-        this.canvas.width = img.width;
-        this.canvas.height = img.height;
-        this.ctx.drawImage(img, 0, 0);
-        
-        // Apply side view transformations
-        this.ctx.transform(-1, 0, 0, 1, img.width, 0); // Flip horizontally
-        this.ctx.filter = 'brightness(0.8) contrast(1.1)';
-        const side = this.canvas.toDataURL('image/png');
-        
-        // Generate back view
-        this.ctx.resetTransform();
-        this.ctx.filter = 'brightness(0.6) contrast(1.2) sepia(0.1)';
-        this.ctx.drawImage(img, 0, 0);
-        const back = this.canvas.toDataURL('image/png');
-        
-        resolve({ front, side, back });
       };
-      
-      img.src = processedImageUrl;
-    });
-  }
 
-  /**
-   * Extract character pose and convert to T-pose if needed
-   */
-  async convertToTPose(imageUrl: string): Promise<string> {
-    // This would typically use pose detection AI
-    // For now, return the original image with a note that T-pose conversion was applied
-    return imageUrl;
-  }
-
-  /**
-   * Remove weapons from character image using AI detection
-   */
-  async removeWeapons(imageUrl: string): Promise<string> {
-    return new Promise((resolve) => {
-      const img = new Image();
+      console.log('🚀 Calling RunPod API with ultra high-quality settings...');
       
-      img.onload = () => {
-        this.canvas.width = img.width;
-        this.canvas.height = img.height;
-        this.ctx.drawImage(img, 0, 0);
-        
-        // Simple weapon removal simulation
-        // In production, this would use AI object detection and inpainting
-        const imageData = this.ctx.getImageData(0, 0, img.width, img.height);
-        const data = imageData.data;
-        
-        // Look for weapon-like shapes (high contrast edges, metallic colors)
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
+      // Call RunPod API
+      const response = await fetch(this.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(processingPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`RunPod API call failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 RunPod API response:', result);
+
+      // Handle response based on endpoint type
+      const isSync = this.apiEndpoint.includes('/runsync');
+      let finalResult = result;
+
+      if (!isSync && result.id) {
+        // For async endpoints, poll for completion
+        finalResult = await this.waitForJobCompletion(result);
+      }
+
+      // Extract processed image URL
+      let processedImageUrl = null;
+      if (finalResult.output) {
+        processedImageUrl = finalResult.output.processed_image_url || 
+                           finalResult.output.image_url ||
+                           finalResult.output.result_url;
+      }
+
+      if (!processedImageUrl) {
+        processedImageUrl = finalResult.processed_image_url ||
+                           finalResult.image_url ||
+                           finalResult.result_url;
+      }
+
+      // Check if we got a real AI processing result
+      const isRealAI = finalResult.handler_version?.includes('REAL_AI') ||
+                      finalResult.output?.gpu_used ||
+                      (finalResult.message && finalResult.message.includes('GPU'));
+
+      if (!processedImageUrl) {
+        if (isRealAI) {
+          throw new Error('Real AI handler responded but no processed image found - check GPU memory or AI model loading');
+        } else {
+          console.log('⚠️ Test handler is running - falling back to local processing');
           
-          // Detect metallic/weapon-like colors and replace with skin/background tones
-          if (this.isWeaponColor(r, g, b)) {
-            // Replace with averaged surrounding colors
-            const avgColor = this.getAverageColorAround(data, i, img.width, img.height);
-            data[i] = avgColor.r;
-            data[i + 1] = avgColor.g;
-            data[i + 2] = avgColor.b;
-          }
-        }
-        
-        this.ctx.putImageData(imageData, 0, 0);
-        resolve(this.canvas.toDataURL('image/png'));
-      };
-      
-      img.src = imageUrl;
-    });
-  }
-
-  /**
-   * Detect if a color is likely to be from a weapon
-   */
-  private isWeaponColor(r: number, g: number, b: number): boolean {
-    // Detect metallic grays, dark colors, and high-contrast edges
-    const isMetallic = Math.abs(r - g) < 20 && Math.abs(g - b) < 20 && r > 100;
-    const isDarkWeapon = r < 80 && g < 80 && b < 80;
-    const isHighContrast = Math.max(r, g, b) - Math.min(r, g, b) > 150;
-    
-    return isMetallic || isDarkWeapon || isHighContrast;
-  }
-
-  /**
-   * Get average color from surrounding pixels
-   */
-  private getAverageColorAround(data: Uint8ClampedArray, pixelIndex: number, width: number, height: number): {r: number, g: number, b: number} {
-    const x = (pixelIndex / 4) % width;
-    const y = Math.floor((pixelIndex / 4) / width);
-    
-    let totalR = 0, totalG = 0, totalB = 0, count = 0;
-    
-    // Sample 3x3 area around pixel
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        const nx = x + dx;
-        const ny = y + dy;
-        
-        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-          const idx = (ny * width + nx) * 4;
-          if (!this.isWeaponColor(data[idx], data[idx + 1], data[idx + 2])) {
-            totalR += data[idx];
-            totalG += data[idx + 1];
-            totalB += data[idx + 2];
-            count++;
-          }
+          // Fallback to local processing
+          const localResult = await this.applyGenshinStyleLocal(imageFile);
+          return {
+            status: 'SUCCESS',
+            processed_image_url: localResult,
+            handler_version: 'LOCAL_FALLBACK_v1.0',
+            config_used: config,
+            processing_time: 0
+          };
         }
       }
+
+      return {
+        status: finalResult.status || 'SUCCESS',
+        processed_image_url: processedImageUrl,
+        handler_version: finalResult.handler_version,
+        config_used: config,
+        processing_time: finalResult.processing_time || 0,
+        gpu_used: finalResult.output?.gpu_used || finalResult.gpu_used
+      };
+
+    } catch (error) {
+      console.error('❌ Image processing error:', error);
+      
+      // Fallback to local processing on API errors
+      try {
+        console.log('🔄 Falling back to local processing...');
+        const localResult = await this.applyGenshinStyleLocal(imageFile);
+        
+        return {
+          status: 'SUCCESS',
+          processed_image_url: localResult,
+          handler_version: 'LOCAL_FALLBACK_v1.0',
+          error: `API Error: ${error instanceof Error ? error.message : 'Unknown error'} - Used local processing`,
+          config_used: config
+        };
+      } catch (localError) {
+        return {
+          status: 'ERROR',
+          error: `Both API and local processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          config_used: config
+        };
+      }
     }
-    
-    if (count === 0) {
-      // Fallback to skin tone
-      return { r: 255, g: 220, b: 177 };
-    }
-    
-    return {
-      r: Math.round(totalR / count),
-      g: Math.round(totalG / count),
-      b: Math.round(totalB / count)
-    };
   }
 
   /**
-   * Cleanup resources
+   * Wait for async job completion
    */
-  dispose() {
-    // Canvas cleanup is handled automatically by garbage collection
+  private async waitForJobCompletion(jobResult: any, maxAttempts: number = 60): Promise<any> {
+    const baseUrl = this.apiEndpoint.replace(/\/(run|runsync)$/, '');
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const statusResponse = await fetch(`${baseUrl}/status/${jobResult.id}`, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error(`Status check failed: ${statusResponse.status}`);
+      }
+
+      const status = await statusResponse.json();
+      
+      if (status.status === 'COMPLETED' || status.status === 'SUCCESS') {
+        return status;
+      } else if (status.status === 'FAILED') {
+        throw new Error(`Job failed: ${status.error || 'Unknown error'}`);
+      }
+      
+      // Wait 5 seconds before next check
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    throw new Error('Job timed out after maximum attempts');
   }
 }
