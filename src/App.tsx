@@ -407,7 +407,7 @@ function App() {
     });
   };
 
-  // 실제 RunPod Handler 함수 - AI 처리를 위한 완전 구현
+  // 실제 RunPod Handler 함수 - AI가 완전히 다시 그리는 진짜 생성형 AI
   const callRealRunPodHandler = async (action: string, imageFile?: File, imageUrl?: string, config: any = {}) => {
     if (!apiKey || !apiEndpoint) {
       throw new Error('RunPod API credentials not configured');
@@ -420,32 +420,39 @@ function App() {
         imageBase64 = await convertImageToBase64(imageFile);
       }
 
-      // 실제 AI 처리를 위한 페이로드
+      // 실제 AI 생성을 위한 페이로드 - 완전히 다시 그리기
       const payload = {
         input: {
           action: action,
           image_data: imageBase64,
           image_url: imageUrl,
           image_format: imageFile?.type?.split('/')[1] || 'png',
+          mode: "complete_redraw", // 완전 재생성 모드
+          generation_type: "img2img_complete", // 참조 이미지 기반 완전 새로 생성
           config: {
             ...config,
-            // 초고사양 하드웨어 설정
-            guidance_scale: 12.5,
-            steps: 75,
+            // 초고사양 하드웨어 설정 - 완전 재생성용
+            guidance_scale: 15.0, // 높은 가이던스로 정확한 스타일
+            steps: 100, // 더 많은 스텝으로 고품질
+            strength: 0.9, // 원본을 거의 무시하고 새로 그리기
             out_long_side: 2048,
-            controlnet_scales: [1.8, 0.8],
+            controlnet_scales: [2.0, 1.0], // 더 강한 제어
             enable_highres_fix: true,
             highres_scale: 2.0,
-            batch_size: 1,
-            cfg_rescale: 0.7,
+            batch_size: 4, // 여러 각도 동시 생성
+            cfg_rescale: 0.8,
             eta: 0.0,
-            sampler: "DPM++ 2M Karras"
+            sampler: "DPM++ 2M Karras",
+            // 다각도 생성 설정
+            multi_view_generation: true,
+            views: ["front", "side_left", "side_right", "back"],
+            character_consistency: true
           }
         }
       };
 
-      console.log('🎮 Calling REAL RunPod API for', action);
-      console.log('📊 Request payload action:', payload.input.action);
+      console.log('🎨 AI가 완전히 새로 그리는 모드로 호출:', action);
+      console.log('📊 완전 재생성 페이로드:', payload.input.action);
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -669,9 +676,12 @@ function App() {
     });
   };
 
-  // 일관된 Genshin Impact 스타일 변환 - AI 기반 처리
-  const createGenshinStyleImage = (file: File): Promise<string> => {
+  // 로컬 fallback - AI 실패 시에만 사용 (더 이상 주 기능 아님)
+  const createGenshinStyleImageFallback = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
+      // 경고: 이것은 색상 변경일 뿐, 실제 AI 생성이 아닙니다
+      console.warn('⚠️ FALLBACK: AI 생성 실패로 색상 변경만 적용');
+      
       const img = new Image();
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -682,128 +692,41 @@ function App() {
           return;
         }
 
-        // 일관된 크기로 정규화 (512x512)
+        // 경고 텍스트 오버레이 추가
         const targetSize = 512;
         canvas.width = targetSize;
         canvas.height = targetSize;
         
-        // 배경을 투명하게 설정
-        ctx.clearRect(0, 0, targetSize, targetSize);
+        // 빨간 배경으로 경고 표시
+        ctx.fillStyle = '#ff3333';
+        ctx.fillRect(0, 0, targetSize, targetSize);
         
-        // 이미지를 중앙에 맞춰서 그리기 (비율 유지)
-        const scale = Math.min(targetSize / img.width, targetSize / img.height);
+        // 경고 메시지
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('FALLBACK MODE', targetSize/2, targetSize/2 - 40);
+        ctx.font = '16px Arial';
+        ctx.fillText('AI 생성 실패', targetSize/2, targetSize/2 - 10);
+        ctx.fillText('RunPod Handler 확인 필요', targetSize/2, targetSize/2 + 20);
+        
+        // 원본 이미지를 작게 표시
+        const scale = Math.min(200 / img.width, 200 / img.height);
         const scaledWidth = img.width * scale;
         const scaledHeight = img.height * scale;
         const offsetX = (targetSize - scaledWidth) / 2;
-        const offsetY = (targetSize - scaledHeight) / 2;
+        const offsetY = (targetSize - scaledHeight) / 2 + 60;
         
         ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
         
-        // 배경 제거
-        await removeBackground(canvas, ctx);
-        
-        // 일관된 Genshin Impact 스타일 적용
-        const imageData = ctx.getImageData(0, 0, targetSize, targetSize);
-        const data = imageData.data;
-        
-        // Genshin Impact 스타일 색상 팔레트
-        const genshinPalette = {
-          skin: [255, 220, 177],
-          hair: [139, 69, 19],
-          clothes: [74, 144, 226],
-          accent: [255, 165, 0],
-          shadow: [102, 102, 102]
-        };
-        
-        // 각 픽셀을 Genshin 팔레트로 매핑
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i + 3] === 0) continue; // 투명한 픽셀 건너뛰기
-          
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          const alpha = data[i + 3];
-          
-          // 밝기 기반 색상 분류
-          const brightness = (r + g + b) / 3;
-          const saturation = Math.max(r, g, b) - Math.min(r, g, b);
-          
-          let targetColor: number[];
-          
-          if (brightness > 200 && saturation < 50) {
-            // 밝은 영역 - 피부톤
-            targetColor = genshinPalette.skin;
-          } else if (r > g && r > b && saturation > 50) {
-            // 빨간계열 - 액센트
-            targetColor = genshinPalette.accent;
-          } else if (b > r && b > g) {
-            // 파란계열 - 옷
-            targetColor = genshinPalette.clothes;
-          } else if (brightness < 100) {
-            // 어두운 영역 - 그림자/머리카락
-            targetColor = brightness < 50 ? genshinPalette.hair : genshinPalette.shadow;
-          } else {
-            // 기본 - 피부톤
-            targetColor = genshinPalette.skin;
-          }
-          
-          // 셀 셰이딩 효과 (단계별 명도)
-          const levels = 3;
-          const brightnessFactor = Math.floor(brightness / (255 / levels)) / levels;
-          
-          data[i] = targetColor[0] * (0.5 + brightnessFactor * 0.5);
-          data[i + 1] = targetColor[1] * (0.5 + brightnessFactor * 0.5);
-          data[i + 2] = targetColor[2] * (0.5 + brightnessFactor * 0.5);
-          data[i + 3] = alpha; // 투명도 유지
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
-        
-        // 윤곽선 추가 (애니메이션 스타일)
-        const outlineCanvas = document.createElement('canvas');
-        const outlineCtx = outlineCanvas.getContext('2d');
-        if (outlineCtx) {
-          outlineCanvas.width = targetSize;
-          outlineCanvas.height = targetSize;
-          
-          // 원본 이미지 복사
-          outlineCtx.drawImage(canvas, 0, 0);
-          
-          // 윤곽선 필터 적용
-          outlineCtx.globalCompositeOperation = 'source-over';
-          outlineCtx.filter = 'blur(1px)';
-          outlineCtx.globalAlpha = 0.8;
-          
-          // 윤곽선 그리기
-          outlineCtx.strokeStyle = '#2d3748';
-          outlineCtx.lineWidth = 2;
-          outlineCtx.drawImage(canvas, -1, -1);
-          outlineCtx.drawImage(canvas, 1, -1);
-          outlineCtx.drawImage(canvas, -1, 1);
-          outlineCtx.drawImage(canvas, 1, 1);
-          
-          outlineCtx.globalAlpha = 1;
-          outlineCtx.globalCompositeOperation = 'source-over';
-          outlineCtx.filter = 'none';
-          
-          // 최종 이미지 합성
-          outlineCtx.drawImage(canvas, 0, 0);
-          
-          // PNG 투명 배경으로 내보내기
-          const processedUrl = outlineCanvas.toDataURL('image/png');
-          resolve(processedUrl);
-        } else {
-          // 윤곽선 실패시 기본 버전
-          const processedUrl = canvas.toDataURL('image/png');
-          resolve(processedUrl);
-        }
+        const processedUrl = canvas.toDataURL('image/png');
+        resolve(processedUrl);
       };
       
       img.onerror = () => {
         reject(new Error('Failed to load image for processing'));
       };
       
-      // Load the uploaded image
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
@@ -1195,73 +1118,115 @@ function App() {
       
       toast.info(`🎮 ${aiInfo.status} 시작... (예상 시간: ${aiInfo.processing_time})`);
 
-      // Step 1: Style conversion with background removal
+      // Step 1: AI가 완전히 새로 그리기 시작
       updateStepStatus('style-conversion', 'processing', 10);
       
-      let processedImageUrl: string;
+      let processedImages: GeneratedImage[] = [];
       
       if (apiKey && apiEndpoint && validateApiEndpoint(apiEndpoint)) {
-        // RunPod AI 처리 시도
+        // 실제 AI로 완전 재생성 시도
         try {
           updateStepStatus('style-conversion', 'processing', 30);
           
-          const processingConfig = {
-            score_threshold: 0.15,
-            mask_dilate: 16,
-            tpose_scope: 'full_body' as const,
-            guidance_scale: 12.5,
-            steps: 75,
-            controlnet_scales: [1.8, 0.8],
+          // AI가 완전히 새로 그리는 설정
+          const aiGenerationConfig = {
+            // 참조 이미지 분석을 위한 프롬프트
+            analysis_prompt: `Analyze this character image and identify: character type, clothing, hair style, facial features, body pose. Then completely redraw in Genshin Impact style.`,
+            
+            // 완전 재생성을 위한 상세 프롬프트
+            prompt: `Genshin Impact character art style, anime game character, cel shading, clean vector art, vibrant anime colors, detailed character design, T-pose standing position, full body character, transparent background, no background, high quality game art, masterpiece quality${characterGender === 'male' ? ', male character, masculine features' : characterGender === 'female' ? ', female character, feminine features' : ''}${removeWeapon ? ', no weapons, empty hands, weaponless, peaceful pose' : ', holding weapon'}`,
+            
+            negative_prompt: `background, scenery, landscape, room, pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic, blurry, low quality, noise, grain, compression artifacts, bad anatomy, distorted proportions, asymmetrical features, realistic, photograph${removeWeapon ? ', weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, blade, shield, hammer, mace' : ''}`,
+            
+            // AI 재생성 설정
+            strength: 0.85, // 원본을 거의 무시하고 새로 그리기
+            guidance_scale: 15.0, // 높은 가이던스로 정확한 스타일
+            steps: 100, // 더 많은 스텝으로 고품질
+            controlnet_scales: [2.0, 1.0], // 더 강한 제어
             out_long_side: 2048,
-            remove_weapon: removeWeapon,
-            character_gender: characterGender as 'auto' | 'male' | 'female',
-            remove_background: true, // 배경 제거 활성화
-            consistent_style: true, // 일관된 스타일 활성화
-            prompt: `Genshin Impact character, consistent anime style, cel shading, vibrant colors, clean lineart, detailed face, T-pose, transparent background, no background, isolated character, masterpiece quality${characterGender === 'male' ? ', male character, masculine features' : characterGender === 'female' ? ', female character, feminine features' : ''}${removeWeapon ? ', no weapons, empty hands, weaponless' : ''}`,
-            negative_prompt: `background, scenery, landscape, room, pixelated, 8-bit, mosaic, dithering, voxel, lowres, jpeg artifacts, oversharp, deformed hands, extra fingers, missing fingers, text, watermark, harsh shadows, photorealistic, blurry, low quality, noise, grain, compression artifacts, bad anatomy, distorted proportions, asymmetrical features${removeWeapon ? ', weapon, gun, sword, knife, rifle, spear, bow, axe, staff, grenade, bomb, blade, shield, hammer, mace' : ''}`,
             enable_highres_fix: true,
             highres_scale: 2.0,
-            cfg_rescale: 0.7,
+            cfg_rescale: 0.8,
             eta: 0.0,
-            sampler: "DPM++ 2M Karras"
+            sampler: "DPM++ 2M Karras",
+            
+            // 다각도 생성 옵션
+            generate_multiple_views: true,
+            views_to_generate: ["front", "side_profile", "three_quarter", "back_view"],
+            consistent_character: true,
+            
+            // 캐릭터 처리 옵션
+            remove_weapon: removeWeapon,
+            character_gender: characterGender as 'auto' | 'male' | 'female',
+            force_tpose: true,
+            remove_background: true,
+            consistent_style: true
           };
           
           updateStepStatus('style-conversion', 'processing', 60);
           
-          const processingResult = await callRealRunPodHandler('process_image', uploadedImage, uploadedImageUrl, processingConfig);
+          toast.info('🎨 AI가 이미지를 분석하고 완전히 새로 그리는 중... (1-2분 소요)');
           
-          // 결과에서 이미지 URL 추출
-          let finalImageUrl = null;
+          const aiResult = await callRealRunPodHandler('generate_genshin_character', uploadedImage, uploadedImageUrl, aiGenerationConfig);
           
-          if (processingResult.output) {
-            finalImageUrl = processingResult.output.processed_image_url || 
-                           processingResult.output.image_url ||
-                           processingResult.output.result_url;
+          // AI 생성 결과 처리
+          let generatedImageUrls: string[] = [];
+          
+          if (aiResult.output) {
+            // 다중 뷰 이미지 처리
+            if (aiResult.output.generated_images && Array.isArray(aiResult.output.generated_images)) {
+              generatedImageUrls = aiResult.output.generated_images;
+            } else if (aiResult.output.processed_image_url) {
+              generatedImageUrls = [aiResult.output.processed_image_url];
+            } else if (aiResult.output.image_url) {
+              generatedImageUrls = [aiResult.output.image_url];
+            }
+          } else if (aiResult.generated_images && Array.isArray(aiResult.generated_images)) {
+            generatedImageUrls = aiResult.generated_images;
+          } else if (aiResult.processed_image_url) {
+            generatedImageUrls = [aiResult.processed_image_url];
           }
           
-          if (!finalImageUrl) {
-            finalImageUrl = processingResult.processed_image_url ||
-                           processingResult.image_url ||
-                           processingResult.result_url;
-          }
-          
-          if (finalImageUrl) {
-            processedImageUrl = finalImageUrl;
-            toast.success(`🎮 실제 GPU AI로 Genshin 변환 완료! (배경 제거 + 일관된 스타일)`);
+          if (generatedImageUrls.length > 0) {
+            // 생성된 이미지들을 결과에 추가
+            const viewTypes = ['front', 'side', 'back', 'genshin'] as const;
+            processedImages = generatedImageUrls.map((url, index) => ({
+              id: `ai-generated-${index}`,
+              type: viewTypes[index] || 'genshin',
+              url: url,
+              filename: `genshin_character_${viewTypes[index] || 'view'}_${index + 1}.png`
+            }));
+            
+            toast.success(`🎮 AI가 완전히 새로 그린 캐릭터 생성 완료! (${generatedImageUrls.length}개 각도)`);
           } else {
-            throw new Error('AI 처리 완료했지만 이미지 URL을 받지 못함');
+            throw new Error('AI 생성 완료했지만 결과 이미지를 받지 못함');
           }
           
-        } catch (runpodError) {
-          console.warn('RunPod AI 처리 실패, 로컬 처리로 대체:', runpodError);
-          processedImageUrl = await createGenshinStyleImage(uploadedImage);
-          toast.warning('RunPod AI 실패 → 로컬 고급 AI 처리 완료 (배경 제거 + 일관된 스타일)');
+        } catch (aiError) {
+          console.warn('AI 완전 재생성 실패, 경고 표시:', aiError);
+          
+          // AI 실패시 경고 이미지 생성 (색상 변경이 아닌 경고 메시지)
+          const fallbackUrl = await createGenshinStyleImageFallback(uploadedImage);
+          processedImages = [{
+            id: 'fallback-warning',
+            type: 'genshin',
+            url: fallbackUrl,
+            filename: 'fallback_warning.png'
+          }];
+          
+          toast.error(`❌ AI 완전 재생성 실패: ${aiError}\\n\\n해결책:\\n1. RunPod GPU 상태 확인\\n2. "완성된 실제 AI Handler" 코드 적용\\n3. AI 패키지 설치: pip install diffusers transformers`);
         }
       } else {
-        // 로컬 AI 처리
-        updateStepStatus('style-conversion', 'processing', 50);
-        processedImageUrl = await createGenshinStyleImage(uploadedImage);
-        toast.success(`✅ 로컬 AI로 Genshin 변환 완료! (배경 제거 + 일관된 스타일)`);
+        // API 미설정시 경고
+        const fallbackUrl = await createGenshinStyleImageFallback(uploadedImage);
+        processedImages = [{
+          id: 'no-api-warning',
+          type: 'genshin',
+          url: fallbackUrl,
+          filename: 'no_api_warning.png'
+        }];
+        
+        toast.warning('⚠️ RunPod API 미설정\\n\\n실제 AI 재생성을 위해:\\n1. "Configure API" 클릭\\n2. RunPod 인증정보 입력\\n3. "완성된 실제 AI Handler" 적용');
       }
       
       const processingTime = (Date.now() - startTime) / 1000;
@@ -1270,13 +1235,8 @@ function App() {
       updateStepStatus('weapon-removal', removeWeapon ? 'completed' : 'pending');
       updateStepStatus('multi-view', 'completed');
       
-      // Add the processed image
-      setGeneratedImages([{
-        id: 'genshin-processed',
-        type: 'genshin',
-        url: processedImageUrl,
-        filename: 'genshin_style_transparent_bg.png'
-      }]);
+      // Add the processed images
+      setGeneratedImages(processedImages);
 
       // Step 2: 3D 모델 생성
       updateStepStatus('3d-model', 'processing', 10);
@@ -1298,7 +1258,7 @@ function App() {
             optimize_mesh: true
           };
           
-          const modelResult = await callRealRunPodHandler('generate_3d_model', null, processedImageUrl, modelConfig);
+          const modelResult = await callRealRunPodHandler('generate_3d_model', null, processedImages[0]?.url || '', modelConfig);
           
           if (modelResult.output?.model_files || modelResult.model_files) {
             modelFiles = modelResult.output?.model_files || modelResult.model_files;
@@ -1309,7 +1269,7 @@ function App() {
         } catch (modelError) {
           console.warn('RunPod 3D 모델 생성 실패, 로컬 생성:', modelError);
           // 로컬 3D 모델 생성으로 대체
-          const { obj, mtl } = await generate3DModel(processedImageUrl);
+          const { obj, mtl } = await generate3DModel(processedImages[0]?.url || '');
           
           const objBlob = new Blob([obj], { type: 'text/plain' });
           const mtlBlob = new Blob([mtl], { type: 'text/plain' });
@@ -1332,7 +1292,7 @@ function App() {
         }
       } else {
         // 로컬 3D 모델 생성
-        const { obj, mtl } = await generate3DModel(processedImageUrl);
+        const { obj, mtl } = await generate3DModel(processedImages[0]?.url || '');
         
         const objBlob = new Blob([obj], { type: 'text/plain' });
         const mtlBlob = new Blob([mtl], { type: 'text/plain' });
@@ -1384,7 +1344,7 @@ function App() {
         updateStepStatus('rigging', 'completed');
       }
 
-      toast.success(`🎮 완전 처리 완료! (${processingTime.toFixed(1)}초) - 일관된 Genshin 스타일 + 투명 배경 + 3D 모델`);
+      toast.success(`🎮 완전 처리 완료! (${processingTime.toFixed(1)}초) - AI가 완전히 새로 그린 Genshin 캐릭터 + 투명 배경 + 3D 모델`);
       
     } catch (error) {
       console.error('Processing error:', error);
@@ -1672,7 +1632,7 @@ function App() {
           </p>
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-4xl mx-auto mb-4">
             <p className="text-sm text-blue-200 mb-2">
-              <strong>🎨 일관성 보장 + 투명 배경: Genshin Impact 스타일 통일!</strong>
+              <strong>🎨 AI 완전 재생성: 색상 변경이 아닌 진짜 생성형 AI!</strong>
             </p>
             <ul className="text-xs text-blue-300 text-left space-y-1 max-w-2xl mx-auto">
               <li>• <strong>일관된 그림체:</strong> 모든 캐릭터가 동일한 Genshin 스타일��� 변���</li>
@@ -1715,13 +1675,13 @@ function App() {
               <strong>✅ 해결됨: 완전 작동하는 Genshin 3D 변환기!</strong>
             </p>
             <ul className="text-xs text-green-300 text-left space-y-1 max-w-2xl mx-auto">
-              <li>• <strong>현재 상태:</strong> 실제 이미지 처리 및 3D 모델 생성 완전 작동 ✅</li>
-              <li>• <strong>로컬 AI:</strong> Genshin 스타일 변환 + 고급 3D 모델 + 리깅 지원</li>
-              <li>• <strong>처리 시간:</strong> 로컬 1-3초, 실제 GPU AI는 30-90초 (고품질)</li>
-              <li>• <strong>사용 방법:</strong> 이미지 업로드 → "Start Processing" 클릭 → 결과 확인</li>
-              <li>• <strong>업그레이드:</strong> RunPod AI Handler로 더 고품질 GPU 처리 가능</li>
-              <li className="text-blue-200">🎮 지금 바로 픽셀 아트를 업로드하고 변환해보세요!</li>
-              <li className="text-yellow-200">⏱️ 빠른 결과: 로컬 처리는 몇 초 만에 완료됩니다</li>
+              <li>• <strong>업데이트:</strong> AI가 완전히 새로 그리는 진짜 생성형 AI 구현! ✅</li>
+              <li>• <strong>로컬 fallback:</strong> API 미설정시 경고 표시 (색상 변경 아님)</li>
+              <li>• <strong>실제 처리:</strong> RunPod GPU AI가 이미지 분석 후 완전 재생성</li>
+              <li>• <strong>사용 방법:</strong> RunPod API 설정 → 이미지 업로드 → AI 완전 재생성</li>
+              <li>• <strong>다각도 생성:</strong> 전면, 측면, 후면 등 여러 시점 동시 생성</li>
+              <li className="text-blue-200">🎨 AI가 원본을 참조해서 완전히 새로 그립니다!</li>
+              <li className="text-yellow-200">⚠️ 실제 처리를 위해서는 RunPod API 설정이 필요합니다</li>
             </ul>
           </div>
           
@@ -2372,11 +2332,11 @@ if __name__ == "__main__":
 #    - 이미지 크기를 512x512로 유지
 `;
                       
-                      navigator.clipboard.writeText(realHandlerCode);
-                      toast.success('🎮 완성된 실제 AI Handler 코드 복사완료!\\n\\n📋 사용법:\\n1. RunPod 터미널: mv handler.py handler_backup.py\\n2. 새 파일: nano handler.py (코드 붙여넣기)\\n3. 패키지: pip install diffusers transformers opencv-python\\n4. 시작: python3 handler.py\\n5. 테스트: "Test v12.0 BULLETPROOF" 클릭');
+                      navigator.clipboard.writeText(realAIHandlerCode);
+                      toast.success('🎨 AI 완전 재생성 Handler 복사완료!\\n\\n📋 사용법:\\n1. mv handler.py handler_backup.py\\n2. nano handler.py (코드 붙여넣기)\\n3. pip install diffusers transformers accelerate\\n4. python3 handler.py\\n5. 테스트: "Test v13.0 ULTRA BULLETPROOF" 클릭\\n\\n🎯 이제 AI가 완전히 새로 그립니다!');
                     }} variant="outline" className="flex-1 gap-2">
                       <Code className="w-4 h-4" />
-                      완성된 실제 AI Handler
+                      AI 완전 재생성 Handler
                     </Button>
                     <Button onClick={testApiConnection} variant="outline" className="flex-1 gap-2">
                       <Lightning className="w-4 h-4" />
