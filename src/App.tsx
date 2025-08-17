@@ -1061,49 +1061,6 @@ function App() {
     }
   };
 
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(setupPayload)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Container initialization failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('Container initialization result:', result);
-      
-      // Handle both sync and async responses
-      if (isSync) {
-        if (result.output && result.output.includes && result.output.includes('Handler successfully started')) {
-          return { id: 'sync-setup', ...result, status: 'COMPLETED' };
-        }
-        return { id: 'sync-setup', ...result, status: 'COMPLETED' };
-      } else {
-        // For async, poll for completion
-        return await waitForJobCompletion(result);
-      }
-    } catch (error) {
-      console.error('Container initialization error:', error);
-      
-      // Provide more specific error handling
-      if (error instanceof Error && error.message.includes('404')) {
-        throw new Error('RunPod endpoint not found - check your endpoint URL');
-      } else if (error instanceof Error && error.message.includes('401')) {
-        throw new Error('Invalid API key - check your RunPod credentials');
-      } else if (error instanceof Error && error.message.includes('500')) {
-        throw new Error('Container startup error - dependencies may be incompatible, try v8.0 fix');
-      }
-      
-      throw error;
-    }
-  };
-
   const callRunPodAPI = async (payload: any) => {
     // Determine if this is a synchronous or asynchronous endpoint
     const isSync = apiEndpoint.includes('/runsync');
@@ -2674,7 +2631,7 @@ if __name__ == "__main__":
               {/* Weapon Removal */}
               <div className="space-y-3">
                 <Label className="flex items-center gap-2">
-                    id="remove-weapon" 
+                  <Sword className="w-4 h-4" />
                   Weapon Handling
                 </Label>
                 <div className="flex items-center space-x-2">
